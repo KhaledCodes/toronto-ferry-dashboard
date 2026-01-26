@@ -4,7 +4,7 @@ A real-time analytics dashboard for Toronto Island Ferry ridership data with 7-d
 
 ## Live Demo
 
-🚀 **[View the Dashboard](https://your-app-name.streamlit.app)** *(update after deployment)*
+🚀 **[View the Dashboard](https://toronto-ferry-dashboard.streamlit.app)** *(will be live after Streamlit deployment)*
 
 ## Features
 
@@ -32,7 +32,7 @@ A real-time analytics dashboard for Toronto Island Ferry ridership data with 7-d
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/toronto-ferry-dashboard.git
+git clone https://github.com/KhaledCodes/toronto-ferry-dashboard.git
 cd toronto-ferry-dashboard
 
 # Install dependencies
