@@ -17,7 +17,7 @@ import pandas as pd
 import numpy as np
 import requests
 import holidays
-from meteostat import Hourly
+import meteostat as ms
 import openmeteo_requests
 import requests_cache
 from retry_requests import retry
@@ -80,7 +80,7 @@ def fetch_weather_data(start_date, end_date):
     print(f"Fetching weather data from {start_date} to {end_date}...")
 
     try:
-        data = Hourly(TORONTO_STATION_ID, start_date, end_date, timezone='America/Toronto')
+        data = ms.hourly(str(TORONTO_STATION_ID), start_date, end_date, timezone='America/Toronto')
         df = data.fetch()
         df = df.reset_index()
         print(f"  Fetched {len(df)} hourly weather records")

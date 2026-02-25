@@ -1,5 +1,7 @@
 # Toronto Island Ferry Dashboard
 
+![Daily Update](https://github.com/KhaledCodes/toronto-ferry-dashboard/actions/workflows/daily_update.yml/badge.svg)
+
 A real-time analytics dashboard for Toronto Island Ferry ridership data with 7-day weather-based forecasts and long-term predictions.
 
 ## Live Demo
