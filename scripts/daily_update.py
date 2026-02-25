@@ -30,7 +30,7 @@ from src.model_inference import (
     generate_forecasts, create_daily_summary,
     generate_long_term_forecasts
 )
-from src.config import OUTPUTS_DIR
+from src.config import OUTPUTS_DIR, HOURLY_DATA_CSV
 
 # Constants
 TORONTO_STATION_ID = 71508  # Meteostat station ID for Toronto
@@ -298,7 +298,7 @@ def generate_all_forecasts():
     # Generate 7-day forecasts
     print("\n--- 7-Day Forecast ---")
     try:
-        forecasts = generate_forecasts()
+        forecasts = generate_forecasts(features_path=str(HOURLY_DATA_CSV))
 
         if len(forecasts) > 0:
             daily = create_daily_summary(forecasts)
@@ -319,7 +319,7 @@ def generate_all_forecasts():
     # Generate long-term forecasts
     print("\n--- Long-Term (365-Day) Forecast ---")
     try:
-        long_term = generate_long_term_forecasts()
+        long_term = generate_long_term_forecasts(features_path=str(HOURLY_DATA_CSV))
 
         if len(long_term) > 0:
             print(f"Long-term forecast saved: {len(long_term)} hourly predictions")
