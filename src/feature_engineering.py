@@ -35,7 +35,7 @@ def aggregate_to_hourly(df: pd.DataFrame) -> pd.DataFrame:
         df['timestamp_hour'] = pd.to_datetime(df['timestamp_hour'])
         group_col = 'timestamp_hour'
     else:
-        df['timestamp_hour'] = df['timestamp'].dt.floor('H')
+        df['timestamp_hour'] = df['timestamp'].dt.floor('h')
         group_col = 'timestamp_hour'
 
     # Custom sum function that returns NaN if all values are NaN

@@ -233,7 +233,7 @@ def update_hourly_data():
         return False
 
     # Process ferry data - aggregate to hourly
-    ferry_df['timestamp_hour'] = ferry_df['timestamp'].dt.floor('H')
+    ferry_df['timestamp_hour'] = ferry_df['timestamp'].dt.floor('h')
     hourly_ferry = ferry_df.groupby('timestamp_hour').agg({
         'redemption_count': 'sum',
         'sales_count': 'sum'

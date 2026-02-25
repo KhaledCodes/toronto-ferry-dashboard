@@ -209,7 +209,7 @@ def get_special_events_calendar() -> pd.DataFrame:
 def create_tourism_projection(
     start_date: datetime,
     end_date: datetime,
-    freq: str = 'H'
+    freq: str = 'h'
 ) -> pd.DataFrame:
     """
     Create a tourism projection DataFrame for a date range.

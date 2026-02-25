@@ -68,7 +68,8 @@ class FerryRidershipModel:
             if col in X.columns:
                 X[col] = X[col].fillna(0).astype(int)
         X = X.fillna(0)
-        preds = self.model.predict(X)
+        # Use numpy array to avoid LightGBM categorical dtype mismatch
+        preds = self.model.predict(X.values)
         return np.clip(preds, 0, None)
 
     def save(self, path: Path) -> None:
