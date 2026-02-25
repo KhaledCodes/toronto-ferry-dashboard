@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd \"/Users/khaledkhatib/Desktop/Data Projects/toronto-ferry-dashboard\" && gh run list --workflow=daily_update.yml --limit=10 2>&1)",
+      "Bash(echo gh CLI not installed:*)",
+      "WebFetch(domain:api.github.com)",
+      "WebSearch",
+      "WebFetch(domain:pypi.org)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:dev.meteostat.net)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(cd:*)",
+      "Bash(tail:*)",
+      "Bash(cd \"/Users/khaledkhatib/Desktop/Data Projects/toronto-ferry-dashboard\" && python -c \"\nimport pickle, sys\n# Try loading with a custom unpickler that reveals the class\nclass RevealUnpickler\\(pickle.Unpickler\\):\n    def find_class\\(self, module, name\\):\n        print\\(f'Looking for: {module}.{name}', file=sys.stderr\\)\n        return super\\(\\).find_class\\(module, name\\)\n\nwith open\\('models/redemption_model.pkl', 'rb'\\) as f:\n    try:\n        model = RevealUnpickler\\(f\\).load\\(\\)\n    except Exception as e:\n        print\\(f'Error: {e}'\\)\n\" 2>&1)",
+      "Bash(cd \"/Users/khaledkhatib/Desktop/Data Projects/toronto-ferry-dashboard\" && python -c \"\nimport sys\nsys.path.insert\\(0, '.'\\)\nfrom src.config import HOURLY_DATA_CSV\nfrom src.model_inference import generate_forecasts\nprint\\('Generating forecasts from:', HOURLY_DATA_CSV\\)\nforecasts = generate_forecasts\\(features_path=str\\(HOURLY_DATA_CSV\\)\\)\nprint\\('Result:', len\\(forecasts\\), 'rows'\\)\n\" 2>&1)",
+      "Bash(cd \"/Users/khaledkhatib/Desktop/Data Projects/toronto-ferry-dashboard\" && python -c \"\nimport sys\nsys.path.insert\\(0, '.'\\)\nfrom src.config import HOURLY_DATA_CSV\nfrom src.model_inference import generate_forecasts, create_daily_summary\nprint\\('Generating forecasts from:', HOURLY_DATA_CSV\\)\nforecasts = generate_forecasts\\(features_path=str\\(HOURLY_DATA_CSV\\)\\)\nif len\\(forecasts\\) > 0:\n    daily = create_daily_summary\\(forecasts\\)\n    print\\('\\\\nDaily forecast:'\\)\n    print\\(daily.to_string\\(\\)\\)\nelse:\n    print\\('No forecasts generated'\\)\n\" 2>&1)",
+      "Bash(grep:*)"
+    ]
+  }
+}
