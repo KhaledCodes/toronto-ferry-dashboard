@@ -244,10 +244,25 @@ def update_hourly_data():
     weather_df = weather_df.rename(columns={'time': 'timestamp'})
     weather_df['timestamp'] = pd.to_datetime(weather_df['timestamp']).dt.tz_localize(None)
 
+    # Fetch 7-day weather forecast from Open-Meteo
+    forecast_df = fetch_weather_forecast()
+    if forecast_df is not None:
+        forecast_df = forecast_df.rename(columns={'time': 'timestamp'})
+        forecast_df['timestamp'] = pd.to_datetime(forecast_df['timestamp']).dt.tz_localize(None)
+        # Combine historical weather with forecast, preferring historical for overlapping hours
+        weather_combined = pd.concat([weather_df, forecast_df], ignore_index=True)
+        weather_combined = weather_combined.drop_duplicates(subset=['timestamp'], keep='first')
+        weather_combined = weather_combined.sort_values('timestamp').reset_index(drop=True)
+        print(f"  Combined weather: {len(weather_combined)} hours (historical + 7-day forecast)")
+    else:
+        weather_combined = weather_df
+        print("  Using historical weather only (forecast fetch failed)")
+
     # Merge ferry and weather
+    weather_cols = [c for c in ['timestamp', 'temp', 'prcp', 'rhum', 'wspd', 'wdir', 'pres'] if c in weather_combined.columns]
     merged_df = pd.merge(
         hourly_ferry,
-        weather_df[['timestamp', 'temp', 'prcp', 'rhum', 'wspd', 'wdir', 'pres']],
+        weather_combined[weather_cols],
         on='timestamp',
         how='outer'
     )
