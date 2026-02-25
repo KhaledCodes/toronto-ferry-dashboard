@@ -15,7 +15,7 @@ PROJECT_ROOT = Path(__file__).parent.parent.parent
 HOURLY_DATA_PATH = PROJECT_ROOT / "outputs" / "hourly_data.csv"
 
 
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=300)
 def load_data():
     df = pd.read_csv(HOURLY_DATA_PATH)
     df['timestamp'] = pd.to_datetime(df['timestamp'])

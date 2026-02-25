@@ -46,7 +46,7 @@ FORECASTS_PATH = PROJECT_ROOT / "outputs" / "forecasts.csv"
 DAILY_FORECASTS_PATH = PROJECT_ROOT / "outputs" / "daily_forecasts.csv"
 
 
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=300)
 def load_hourly_data():
     """Load hourly historical data."""
     df = pd.read_csv(HOURLY_DATA_PATH)
@@ -55,7 +55,7 @@ def load_hourly_data():
     return df
 
 
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=300)
 def load_forecasts():
     """Load forecast data."""
     if FORECASTS_PATH.exists():
@@ -65,7 +65,7 @@ def load_forecasts():
     return None
 
 
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=300)
 def load_daily_forecasts():
     """Load daily forecast summary."""
     if DAILY_FORECASTS_PATH.exists():

@@ -20,14 +20,14 @@ LONG_TERM_DAILY_PATH = PROJECT_ROOT / "outputs" / "long_term_daily_forecasts.csv
 LONG_TERM_MONTHLY_PATH = PROJECT_ROOT / "outputs" / "long_term_monthly_forecasts.csv"
 
 
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=300)
 def load_historical():
     df = pd.read_csv(HOURLY_DATA_PATH)
     df['timestamp'] = pd.to_datetime(df['timestamp'])
     return df
 
 
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=300)
 def load_forecasts():
     if FORECASTS_PATH.exists():
         df = pd.read_csv(FORECASTS_PATH)
@@ -36,7 +36,7 @@ def load_forecasts():
     return None
 
 
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=300)
 def load_daily_forecasts():
     if DAILY_FORECASTS_PATH.exists():
         df = pd.read_csv(DAILY_FORECASTS_PATH)
@@ -45,7 +45,7 @@ def load_daily_forecasts():
     return None
 
 
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=300)
 def load_long_term_forecasts():
     if LONG_TERM_FORECASTS_PATH.exists():
         df = pd.read_csv(LONG_TERM_FORECASTS_PATH)
@@ -54,7 +54,7 @@ def load_long_term_forecasts():
     return None
 
 
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=300)
 def load_long_term_daily():
     if LONG_TERM_DAILY_PATH.exists():
         df = pd.read_csv(LONG_TERM_DAILY_PATH)
@@ -63,7 +63,7 @@ def load_long_term_daily():
     return None
 
 
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=300)
 def load_long_term_monthly():
     if LONG_TERM_MONTHLY_PATH.exists():
         df = pd.read_csv(LONG_TERM_MONTHLY_PATH)
