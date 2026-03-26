@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Toronto Ferry Dashboard</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+
+    .subtitle {
+      color: #94a3b8;
+      font-size: 0.9rem;
+      margin-bottom: 2rem;
+    }
+
+    /* KPI cards */
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .kpi {
+      background: #1e293b;
+      border-radius: 10px;
+      padding: 1.25rem;
+    }
+
+    .kpi-label {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+    }
+
+    .kpi-value {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #38bdf8;
+    }
+
+    .kpi-detail {
+      font-size: 0.8rem;
+      color: #64748b;
+      margin-top: 0.25rem;
+    }
+
+    /* Chart sections */
+    .chart-section {
+      background: #1e293b;
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .chart-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .chart-controls {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .chart-controls button {
+      background: #334155;
+      color: #94a3b8;
+      border: none;
+      padding: 0.35rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .chart-controls button:hover { background: #475569; color: #e2e8f0; }
+    .chart-controls button.active { background: #38bdf8; color: #0f172a; }
+
+    /* D3 chart styles */
+    .axis text { fill: #64748b; font-size: 11px; }
+    .axis path, .axis line { stroke: #334155; }
+    .grid line { stroke: #1e293b; }
+
+    .tooltip {
+      position: absolute;
+      background: #334155;
+      color: #e2e8f0;
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s;
+      white-space: nowrap;
+    }
+
+    .live-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background: #22c55e;
+      border-radius: 50%;
+      margin-right: 0.5rem;
+      position: relative;
+      top: -1px;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.6); }
+      50% { opacity: 0.6; box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
+    }
+
+    .loading {
+      text-align: center;
+      padding: 3rem;
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Toronto Island Ferry</h1>
+  <p class="subtitle"><span class="live-dot"></span>Live ridership data from Toronto Open Data</p>
+
+  <div class="kpis" id="kpis">
+    <div class="loading">Loading data...</div>
+  </div>
+
+  <div class="chart-section">
+    <div class="chart-header">
+      <span class="chart-title">Daily Redemptions</span>
+      <div class="chart-controls" id="trend-controls">
+        <button data-range="1">1D</button>
+        <button data-range="7">7D</button>
+        <button data-range="14">14D</button>
+        <button data-range="30" class="active">30D</button>
+        <button data-range="90">90D</button>
+        <button data-range="365">1Y</button>
+        <button data-range="all">All</button>
+      </div>
+    </div>
+    <div id="trend-chart"></div>
+  </div>
+
+  <div class="tooltip" id="tooltip"></div>
+
+  <script>
+    const DAILY_URL = "outputs/daily_totals.csv";
+    const HOURLY_URL = "outputs/hourly_totals.csv";
+
+    const fmt = d3.format(",");
+    const fmtDate = d3.timeFormat("%b %d, %Y");
+    const fmtDateShort = d3.timeFormat("%b %d");
+    const fmtHour = d3.timeFormat("%b %d, %Y %I:%M %p");
+
+    let allData = [];
+    let hourlyData = [];
+
+    Promise.all([
+      d3.csv(DAILY_URL, d => ({
+        date: d3.timeParse("%Y-%m-%d")(d.date),
+        redemptions: +d.redemptions,
+      })),
+      d3.csv(HOURLY_URL, d => ({
+        date: d3.timeParse("%Y-%m-%d %H:%M:%S")(d.hour),
+        redemptions: +d.redemptions,
+      })),
+    ]).then(([daily, hourly]) => {
+      allData = daily.filter(d => d.date !== null);
+      hourlyData = hourly.filter(d => d.date !== null);
+      renderKPIs();
+      renderTrendChart(30);
+
+      d3.selectAll("#trend-controls button").on("click", function () {
+        d3.selectAll("#trend-controls button").classed("active", false);
+        d3.select(this).classed("active", true);
+        const range = this.dataset.range;
+        renderTrendChart(range === "all" ? "all" : +range);
+      });
+    });
+
+    /* ── KPIs ── */
+    function renderKPIs() {
+      const latest = allData[allData.length - 1];
+
+      const last7 = allData.slice(-7);
+      const weekTotal = d3.sum(last7, d => d.redemptions);
+
+      const oneYearAgo = d3.timeDay.offset(latest.date, -365);
+      const lastYear7 = allData.filter(d =>
+        d.date >= d3.timeDay.offset(oneYearAgo, -3) &&
+        d.date <= d3.timeDay.offset(oneYearAgo, 3)
+      );
+      const lastYearWeekTotal = d3.sum(lastYear7, d => d.redemptions);
+
+      const thisYear = allData.filter(d => d.date.getFullYear() === latest.date.getFullYear());
+      const peak = thisYear.reduce((a, b) => a.redemptions > b.redemptions ? a : b);
+
+      const kpis = [
+        { label: "Latest Day", value: fmt(latest.redemptions), detail: fmtDate(latest.date) },
+        { label: "Last 7 Days", value: fmt(weekTotal), detail: `vs ${fmt(lastYearWeekTotal)} last year` },
+        { label: `Peak Day (${latest.date.getFullYear()})`, value: fmt(peak.redemptions), detail: fmtDate(peak.date) },
+        { label: "Data Range", value: `${latest.date.getFullYear() - allData[0].date.getFullYear()}+ yrs`, detail: `${fmtDateShort(allData[0].date)} ${allData[0].date.getFullYear()} – ${fmtDateShort(latest.date)} ${latest.date.getFullYear()}` },
+      ];
+
+      const container = d3.select("#kpis");
+      container.html("");
+      kpis.forEach(k => {
+        const card = container.append("div").attr("class", "kpi");
+        card.append("div").attr("class", "kpi-label").text(k.label);
+        card.append("div").attr("class", "kpi-value").text(k.value);
+        card.append("div").attr("class", "kpi-detail").text(k.detail);
+      });
+    }
+
+    /* ── Trend Line Chart ── */
+    function renderTrendChart(rangeDays) {
+      const container = d3.select("#trend-chart");
+      container.html("");
+
+      const isHourly = rangeDays === 1;
+      const source = isHourly ? hourlyData : allData;
+      const latestDate = source[source.length - 1].date;
+      const data = rangeDays === "all"
+        ? source
+        : source.filter(d => d.date >= d3.timeDay.offset(latestDate, -rangeDays));
+
+      const width = container.node().clientWidth;
+      const height = 350;
+      const margin = { top: 20, right: 20, bottom: 40, left: 55 };
+      const w = width - margin.left - margin.right;
+      const h = height - margin.top - margin.bottom;
+
+      const svg = container.append("svg")
+        .attr("width", width)
+        .attr("height", height);
+
+      const g = svg.append("g")
+        .attr("transform", `translate(${margin.left},${margin.top})`);
+
+      const x = d3.scaleTime().domain(d3.extent(data, d => d.date)).range([0, w]);
+      const y = d3.scaleLinear().domain([0, d3.max(data, d => d.redemptions) * 1.05]).range([h, 0]);
+
+      g.append("g").attr("class", "grid")
+        .call(d3.axisLeft(y).ticks(5).tickSize(-w).tickFormat(""))
+        .call(g => g.select(".domain").remove());
+
+      const daySpan = (x.domain()[1] - x.domain()[0]) / (1000 * 60 * 60 * 24);
+      let tickFormat, tickInterval;
+      if (isHourly) {
+        tickFormat = d3.timeFormat("%I %p");
+        tickInterval = d3.timeHour.every(3);
+      } else if (daySpan <= 2) {
+        tickFormat = d3.timeFormat("%b %d");
+        tickInterval = d3.timeDay.every(1);
+      } else if (daySpan <= 10) {
+        tickFormat = d3.timeFormat("%b %d");
+        tickInterval = d3.timeDay.every(1);
+      } else if (daySpan <= 20) {
+        tickFormat = d3.timeFormat("%b %d");
+        tickInterval = d3.timeDay.every(2);
+      } else if (daySpan <= 45) {
+        tickFormat = d3.timeFormat("%b %d");
+        tickInterval = d3.timeWeek.every(1);
+      } else if (daySpan <= 120) {
+        tickFormat = d3.timeFormat("%b %d");
+        tickInterval = d3.timeWeek.every(2);
+      } else if (daySpan <= 400) {
+        tickFormat = d3.timeFormat("%b '%y");
+        tickInterval = d3.timeMonth.every(1);
+      } else {
+        tickFormat = d3.timeFormat("%b '%y");
+        tickInterval = d3.timeMonth.every(Math.ceil(daySpan / 365 * 2));
+      }
+
+      g.append("g").attr("class", "axis")
+        .attr("transform", `translate(0,${h})`)
+        .call(d3.axisBottom(x).ticks(tickInterval).tickFormat(tickFormat));
+
+      g.append("g").attr("class", "axis")
+        .call(d3.axisLeft(y).ticks(5).tickFormat(d3.format("~s")));
+
+      g.append("path")
+        .datum(data)
+        .attr("fill", "rgba(56, 189, 248, 0.1)")
+        .attr("d", d3.area()
+          .x(d => x(d.date))
+          .y0(h)
+          .y1(d => y(d.redemptions))
+          .curve(d3.curveMonotoneX)
+        );
+
+      g.append("path")
+        .datum(data)
+        .attr("fill", "none")
+        .attr("stroke", "#38bdf8")
+        .attr("stroke-width", 1.5)
+        .attr("d", d3.line()
+          .x(d => x(d.date))
+          .y(d => y(d.redemptions))
+          .curve(d3.curveMonotoneX)
+        );
+
+      const tooltip = d3.select("#tooltip");
+      const bisect = d3.bisector(d => d.date).left;
+
+      const focus = g.append("circle")
+        .attr("r", 4)
+        .attr("fill", "#38bdf8")
+        .style("display", "none");
+
+      svg.append("rect")
+        .attr("width", w)
+        .attr("height", h)
+        .attr("transform", `translate(${margin.left},${margin.top})`)
+        .attr("fill", "transparent")
+        .on("mousemove", function (event) {
+          const [mx] = d3.pointer(event, this);
+          const date = x.invert(mx);
+          const i = bisect(data, date, 1);
+          const d0 = data[i - 1], d1 = data[i];
+          if (!d0 || !d1) return;
+          const d = date - d0.date > d1.date - date ? d1 : d0;
+          focus.style("display", null).attr("cx", x(d.date)).attr("cy", y(d.redemptions));
+          const label = isHourly ? fmtHour(d.date) : fmtDate(d.date);
+          tooltip.style("opacity", 1)
+            .html(`<strong>${label}</strong><br>Redemptions: ${fmt(d.redemptions)}`)
+            .style("left", (event.pageX + 12) + "px")
+            .style("top", (event.pageY - 12) + "px");
+        })
+        .on("mouseleave", () => {
+          focus.style("display", "none");
+          tooltip.style("opacity", 0);
+        });
+    }
+
+    window.addEventListener("resize", () => {
+      const activeRange = d3.select("#trend-controls button.active").attr("data-range");
+      renderTrendChart(activeRange === "all" ? "all" : +activeRange);
+    });
+  </script>
+
+</body>
+</html>
