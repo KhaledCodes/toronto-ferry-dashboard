@@ -2,110 +2,65 @@
 
 ![Daily Update](https://github.com/KhaledCodes/toronto-ferry-dashboard/actions/workflows/daily_update.yml/badge.svg)
 
-A real-time analytics dashboard for Toronto Island Ferry ridership data with 7-day weather-based forecasts and long-term predictions.
+A live dashboard tracking Toronto Island Ferry ridership, built with D3.js and served via GitHub Pages. Data is refreshed daily from the Toronto Open Data API using GitHub Actions.
 
 ## Live Demo
 
-🚀 **[View the Dashboard](https://toronto-ferry-dashboard.streamlit.app)** *(will be live after Streamlit deployment)*
+**[View the Dashboard](https://khaledcodes.github.io/toronto-ferry-dashboard/)**
 
 ## Features
 
-- **Real-time Analytics**: View current and historical ridership patterns
-- **7-Day Forecasts**: Weather-based predictions using LightGBM models
-- **Long-Term Outlook**: 365-day forecasts using historical weather patterns
-- **World Cup 2026**: Special tourism features for FIFA World Cup Toronto matches
-- **Interactive Charts**: Filter by time granularity, compare redemptions vs sales
+- **Live Data**: Automatically updated daily from Toronto Open Data
+- **Multiple Time Scales**: 1D (hourly), 7D, 14D, 30D, 90D, 1Y, and all-time views
+- **Interactive Charts**: Hover tooltips, responsive D3.js area chart
+- **KPI Summary**: Latest day, 7-day total, peak day, and year-over-year comparison
 
-## Data Sources
+## Data Source
 
-- **Ferry Data**: [Toronto Open Data](https://open.toronto.ca/dataset/toronto-island-ferry-ticket-counts/)
-- **Weather Data**: [Meteostat](https://meteostat.net/) & [Open-Meteo](https://open-meteo.com/)
+- **Ferry Ticket Counts**: [Toronto Open Data](https://open.toronto.ca/dataset/toronto-island-ferry-ticket-counts/) - 15-minute interval ticket redemptions since 2015
 
-## Deployment
+## How It Works
 
-### Streamlit Community Cloud
-
-1. Fork this repository
-2. Go to [share.streamlit.io](https://share.streamlit.io)
-3. Connect your GitHub account
-4. Deploy from `dashboard/Home.py`
-
-### Local Development
-
-```bash
-# Clone the repository
-git clone https://github.com/KhaledCodes/toronto-ferry-dashboard.git
-cd toronto-ferry-dashboard
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Run the dashboard
-streamlit run dashboard/Home.py
-```
-
-## Automatic Daily Updates
-
-This repository uses GitHub Actions to automatically update data daily at 8:00 AM UTC:
-
-1. Fetches latest ferry ticket data from Toronto Open Data API
-2. Updates weather data and forecasts
-3. Regenerates 7-day and long-term predictions
-4. Commits updated CSVs back to the repository
-
-The workflow can also be triggered manually from the Actions tab.
+1. **GitHub Actions** runs daily at 8:00 AM UTC
+2. `fetch_ferry_data.py` pulls the latest ticket data from the Toronto Open Data API
+3. `aggregate_daily.py` aggregates to hourly and daily totals
+4. Updated CSVs are committed back to the repo
+5. GitHub Pages serves `index.html`, which loads the CSVs with D3.js
 
 ## Project Structure
 
 ```
 toronto-ferry-dashboard/
-├── .github/
-│   └── workflows/
-│       └── daily_update.yml    # GitHub Actions for daily updates
-├── .streamlit/
-│   └── config.toml             # Streamlit configuration
-├── dashboard/
-│   ├── Home.py                 # Main dashboard page
-│   └── pages/
-│       ├── 1_Historical.py     # Historical trends
-│       ├── 2_Forecast.py       # 7-day & long-term forecasts
-│       ├── 3_Weather.py        # Weather analysis
-│       └── 4_Calendar.py       # Calendar view
-├── models/
-│   ├── redemption_model.pkl    # Trained LightGBM model (redemptions)
-│   ├── sales_model.pkl         # Trained LightGBM model (sales)
-│   ├── *_no_weather.pkl        # Models for long-term forecasts
-│   └── model_metadata.json     # Model training metadata
-├── outputs/
-│   ├── hourly_data.csv         # Historical hourly data
-│   ├── forecasts.csv           # 7-day hourly forecasts
-│   ├── daily_forecasts.csv     # 7-day daily summary
-│   └── long_term_*.csv         # Long-term forecast files
+├── index.html                     # Dashboard (D3.js)
 ├── scripts/
-│   ├── daily_update.py         # Daily data update script
-│   ├── generate_forecasts.py   # Forecast generation
-│   └── train_models.py         # Model training
-├── src/
-│   ├── config.py               # Configuration settings
-│   ├── feature_engineering.py  # Feature creation
-│   ├── model_inference.py      # Prediction logic
-│   ├── tourism_features.py     # Tourism & World Cup features
-│   └── weather_climatology.py  # Historical weather patterns
-├── requirements.txt            # Python dependencies
-└── README.md
+│   ├── fetch_ferry_data.py        # Fetches raw data from Toronto Open Data
+│   └── aggregate_daily.py         # Aggregates to daily + hourly CSVs
+├── outputs/
+│   ├── ferry_ticket_counts.csv    # Raw 15-min ticket data
+│   ├── daily_totals.csv           # Daily redemption totals
+│   └── hourly_totals.csv          # Hourly redemption totals
+├── .github/workflows/
+│   └── daily_update.yml           # GitHub Actions daily pipeline
+├── archive/                       # Previous Streamlit + ML pipeline
+└── requirements.txt
 ```
 
-## Model Information
+## Local Development
 
-- **Algorithm**: LightGBM (Gradient Boosting)
-- **Features**: 23+ features including weather, time, holidays, tourism
-- **Target Variables**: Ticket redemptions and sales (separate models)
-- **Training Data**: 2015-present (~10 years of hourly data)
+```bash
+git clone https://github.com/KhaledCodes/toronto-ferry-dashboard.git
+cd toronto-ferry-dashboard
+
+# Fetch fresh data
+pip install requests pandas
+python scripts/fetch_ferry_data.py
+python scripts/aggregate_daily.py
+
+# Serve locally
+python -m http.server 8090
+# Open http://localhost:8090
+```
 
 ## License
 
 MIT License - feel free to use and modify for your own projects.
-
-## Contributing
-
-Contributions are welcome! Please open an issue or submit a pull request.
