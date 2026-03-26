@@ -28,10 +28,13 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install requests pandas
 
-      - name: Run daily update
-        run: python scripts/daily_update.py
+      - name: Fetch ferry data
+        run: python scripts/fetch_ferry_data.py
+
+      - name: Aggregate to daily and hourly
+        run: python scripts/aggregate_daily.py
 
       - name: Check for changes
         id: check_changes
@@ -66,7 +69,6 @@ jobs:
             const body = `The daily data update workflow failed.\n\n` +
               `**Run:** ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}\n\n` +
               `Please check the logs and fix the issue.`;
-            // Check for existing open failure issues to avoid duplicates
             const issues = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
