@@ -48,6 +48,7 @@ jobs:
           git config --local user.name "github-actions[bot]"
           git add outputs/
           git commit -m "Daily data update - $(date +'%Y-%m-%d')"
+          git pull --rebase
           git push
 
       - name: No changes detected
