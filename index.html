@@ -147,7 +147,7 @@
     .grid line { stroke: #152d50; }
 
     .tooltip {
-      position: absolute;
+      position: fixed;
       background: #1a3f6b;
       color: #e8f4ff;
       padding: 0.5rem 0.75rem;
@@ -505,8 +505,8 @@
           const label = isHourly ? fmtHour(d.date) : fmtDate(d.date);
           tooltip.style("opacity", 1)
             .html(`<span class="tooltip-icon">&#9875;</span><strong>${label}</strong><br>Redemptions: ${fmt(d.redemptions)}`)
-            .style("left", (event.pageX + 12) + "px")
-            .style("top", (event.pageY - 12) + "px");
+            .style("left", (event.clientX + 12) + "px")
+            .style("top", (event.clientY - 12) + "px");
         })
         .on("mouseleave", () => {
           focus.style("display", "none");
