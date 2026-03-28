@@ -6,12 +6,18 @@ on:
     - cron: '0 * * * *'
   workflow_dispatch:  # Allow manual trigger
 
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
 jobs:
   update-data:
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: write
 
     steps:
       - name: Checkout repository
@@ -54,6 +60,35 @@ jobs:
       - name: No changes detected
         if: steps.check_changes.outputs.changes != 'true'
         run: echo "No new data to commit"
+
+  deploy-pages:
+    runs-on: ubuntu-latest
+    needs: update-data
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Build with Jekyll
+        uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./
+          destination: ./_site
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
 
   notify-failure:
     runs-on: ubuntu-latest
