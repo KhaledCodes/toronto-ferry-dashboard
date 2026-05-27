@@ -202,6 +202,151 @@
       color: #4e7a9e;
     }
 
+    /* Prediction section */
+    .prediction-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .prediction-headline {
+      display: flex;
+      align-items: baseline;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .prediction-value {
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: #e8943a;
+    }
+
+    .prediction-date {
+      font-size: 0.95rem;
+      color: #7ba7cc;
+    }
+
+    .prediction-range {
+      font-size: 0.8rem;
+      color: #4e7a9e;
+      margin-top: 0.25rem;
+    }
+
+    .prediction-legend {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+      font-size: 0.75rem;
+      color: #7ba7cc;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .legend-swatch {
+      width: 12px;
+      height: 12px;
+      border-radius: 2px;
+    }
+
+    .legend-swatch.actual { background: #4a9ede; }
+    .legend-swatch.predicted { background: #e8943a; opacity: 0.85; }
+    .legend-line {
+      width: 16px;
+      height: 2px;
+      border-top: 2px dashed #22c55e;
+    }
+
+    /* WIP banner */
+    .wip-banner {
+      background: rgba(232, 148, 58, 0.08);
+      border: 1px solid rgba(232, 148, 58, 0.25);
+      border-radius: 8px;
+      padding: 0.7rem 1rem;
+      margin-bottom: 1.5rem;
+      font-size: 0.82rem;
+      color: #c8a66a;
+      line-height: 1.5;
+    }
+
+    /* Accuracy table */
+    .accuracy-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .accuracy-stats {
+      display: flex;
+      gap: 1.5rem;
+      font-size: 0.8rem;
+      color: #7ba7cc;
+    }
+
+    .accuracy-stats span {
+      color: #4a9ede;
+      font-weight: 600;
+    }
+
+    .accuracy-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    .accuracy-table th {
+      text-align: left;
+      padding: 0.6rem 0.75rem;
+      color: #7ba7cc;
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      border-bottom: 1px solid #1e4976;
+    }
+
+    .accuracy-table td {
+      padding: 0.55rem 0.75rem;
+      border-bottom: 1px solid #122a4e;
+      color: #c8dae8;
+    }
+
+    .accuracy-table tr:hover td {
+      background: rgba(74, 158, 222, 0.06);
+    }
+
+    .accuracy-table .pending {
+      color: #4e7a9e;
+      font-style: italic;
+    }
+
+    .error-good { color: #22c55e; }
+    .error-ok { color: #e8943a; }
+    .error-bad { color: #e05252; }
+
+    .within-ci {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-left: 0.4rem;
+      position: relative;
+      top: -1px;
+    }
+
+    .within-ci.yes { background: #22c55e; }
+    .within-ci.no { background: #e05252; }
+
     /* Footer */
     .footer {
       text-align: center;
@@ -264,6 +409,51 @@
     <div id="trend-chart"></div>
   </div>
 
+  <div class="wip-banner" id="wip-banner" style="display:none;">
+    &#128679; <strong>Work in Progress</strong> — The forecast and accuracy tracker are new features still being tuned. Predictions will improve as more data is collected.
+  </div>
+
+  <div class="chart-section" id="prediction-section" style="display:none;">
+    <div class="prediction-header">
+      <div>
+        <span class="chart-title">Tomorrow's Forecast</span>
+        <div class="prediction-headline">
+          <span class="prediction-value" id="pred-value">—</span>
+          <span class="prediction-date" id="pred-date"></span>
+        </div>
+        <div class="prediction-range" id="pred-range"></div>
+      </div>
+      <div class="prediction-legend">
+        <div class="legend-item"><div class="legend-swatch actual"></div>Actual</div>
+        <div class="legend-item"><div class="legend-swatch predicted"></div>Predicted</div>
+        <div class="legend-item"><div class="legend-line"></div>Day-of-week avg</div>
+      </div>
+    </div>
+    <div id="prediction-chart"></div>
+  </div>
+
+  <div class="chart-section" id="accuracy-section" style="display:none;">
+    <div class="accuracy-header">
+      <span class="chart-title">Model Accuracy Tracker</span>
+      <div class="accuracy-stats" id="accuracy-stats"></div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="accuracy-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Day</th>
+            <th>Predicted</th>
+            <th>Actual</th>
+            <th>Error %</th>
+            <th>In Range</th>
+          </tr>
+        </thead>
+        <tbody id="accuracy-body"></tbody>
+      </table>
+    </div>
+  </div>
+
   <!-- Wave decoration at bottom -->
   <div class="wave-decoration">
     <svg viewBox="0 0 1200 30" preserveAspectRatio="none">
@@ -281,6 +471,8 @@
   <script>
     const DAILY_URL = "outputs/daily_totals.csv";
     const HOURLY_URL = "outputs/hourly_totals.csv";
+    const PREDICTION_URL = "outputs/prediction.json";
+    const HISTORY_URL = "outputs/prediction_history.csv";
 
     const fmt = d3.format(",");
     const fmtDate = d3.timeFormat("%b %d, %Y");
@@ -289,6 +481,7 @@
 
     let allData = [];
     let hourlyData = [];
+    let predictionData = null;
 
     /* Season-based bar color */
     function barColor(date) {
@@ -313,11 +506,18 @@
         date: d3.timeParse("%Y-%m-%d %H:%M:%S")(d.hour),
         redemptions: +d.redemptions,
       })),
-    ]).then(([daily, hourly]) => {
+      d3.json(PREDICTION_URL).catch(() => null),
+      d3.csv(HISTORY_URL).catch(() => null),
+    ]).then(([daily, hourly, prediction, history]) => {
       allData = daily.filter(d => d.date !== null);
       hourlyData = hourly.filter(d => d.date !== null);
       renderKPIs();
       renderTrendChart(30);
+      if (prediction) {
+        predictionData = prediction;
+        renderPrediction(prediction);
+      }
+      if (history && history.length > 0) renderAccuracy(history);
 
       d3.selectAll("#trend-controls button").on("click", function () {
         d3.selectAll("#trend-controls button").classed("active", false);
@@ -514,9 +714,219 @@
         });
     }
 
+    /* ── Prediction Chart ── */
+    function renderPrediction(pred) {
+      const generatedAt = new Date(pred.model_info.generated_at);
+      const ageHours = (Date.now() - generatedAt.getTime()) / (1000 * 60 * 60);
+      if (ageHours > 48) return;
+
+      d3.select("#wip-banner").style("display", null);
+      const section = d3.select("#prediction-section").style("display", null);
+
+      d3.select("#pred-value").text(fmt(pred.predicted_redemptions));
+      d3.select("#pred-date").text(`${pred.day_of_week_name}, ${d3.timeParse("%Y-%m-%d")(pred.prediction_date) ? d3.timeFormat("%B %d, %Y")(d3.timeParse("%Y-%m-%d")(pred.prediction_date)) : pred.prediction_date}`);
+      d3.select("#pred-range").text(`Expected range: ${fmt(pred.confidence_interval.lower)} – ${fmt(pred.confidence_interval.upper)}`);
+
+      drawPredictionChart(pred);
+    }
+
+    function drawPredictionChart(pred) {
+      const container = d3.select("#prediction-chart");
+      container.html("");
+
+      const chartData = pred.context.last_7d.map(d => ({
+        date: d3.timeParse("%Y-%m-%d")(d.date),
+        redemptions: d.redemptions,
+        type: "actual",
+      }));
+
+      chartData.push({
+        date: d3.timeParse("%Y-%m-%d")(pred.prediction_date),
+        redemptions: pred.predicted_redemptions,
+        type: "predicted",
+        ciLower: pred.confidence_interval.lower,
+        ciUpper: pred.confidence_interval.upper,
+      });
+
+      const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+      const width = container.node().clientWidth;
+      const height = 220;
+      const margin = { top: 15, right: 20, bottom: 35, left: 55 };
+      const w = width - margin.left - margin.right;
+      const h = height - margin.top - margin.bottom;
+
+      const svg = container.append("svg").attr("width", width).attr("height", height);
+
+      const defs = svg.append("defs");
+      const pattern = defs.append("pattern")
+        .attr("id", "pred-stripe")
+        .attr("width", 6).attr("height", 6)
+        .attr("patternUnits", "userSpaceOnUse")
+        .attr("patternTransform", "rotate(45)");
+      pattern.append("rect").attr("width", 6).attr("height", 6).attr("fill", "#e8943a").attr("opacity", 0.25);
+      pattern.append("line").attr("x1", 0).attr("y1", 0).attr("x2", 0).attr("y2", 6)
+        .attr("stroke", "#e8943a").attr("stroke-width", 2.5);
+
+      const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+      const yMax = Math.max(
+        d3.max(chartData, d => d.type === "predicted" ? d.ciUpper : d.redemptions),
+        pred.context.same_dow_avg
+      ) * 1.1;
+
+      const x = d3.scaleBand()
+        .domain(chartData.map((_, i) => i))
+        .range([0, w])
+        .padding(0.25);
+
+      const y = d3.scaleLinear().domain([0, yMax]).range([h, 0]);
+
+      g.append("g").attr("class", "grid")
+        .call(d3.axisLeft(y).ticks(4).tickSize(-w).tickFormat(""))
+        .call(g => g.select(".domain").remove());
+
+      g.append("g").attr("class", "axis")
+        .attr("transform", `translate(0,${h})`)
+        .call(d3.axisBottom(x).tickFormat(i => {
+          const d = chartData[i];
+          const day = dayNames[d.date.getDay()];
+          return d.type === "predicted" ? `${day}*` : day;
+        }));
+
+      g.append("g").attr("class", "axis")
+        .call(d3.axisLeft(y).ticks(4).tickFormat(d3.format("~s")));
+
+      chartData.forEach((d, i) => {
+        if (d.type === "predicted") {
+          g.append("rect")
+            .attr("x", x(i))
+            .attr("y", y(d.ciUpper))
+            .attr("width", x.bandwidth())
+            .attr("height", y(d.ciLower) - y(d.ciUpper))
+            .attr("fill", "#e8943a")
+            .attr("opacity", 0.12)
+            .attr("rx", 2);
+
+          g.append("rect")
+            .attr("x", x(i))
+            .attr("y", y(d.redemptions))
+            .attr("width", x.bandwidth())
+            .attr("height", h - y(d.redemptions))
+            .attr("fill", "url(#pred-stripe)")
+            .attr("stroke", "#e8943a")
+            .attr("stroke-width", 1.5)
+            .attr("rx", 2);
+        } else {
+          g.append("rect")
+            .attr("x", x(i))
+            .attr("y", y(d.redemptions))
+            .attr("width", x.bandwidth())
+            .attr("height", h - y(d.redemptions))
+            .attr("fill", barColor(d.date))
+            .attr("opacity", 0.85)
+            .attr("rx", 2);
+        }
+      });
+
+      g.append("line")
+        .attr("x1", 0).attr("x2", w)
+        .attr("y1", y(pred.context.same_dow_avg))
+        .attr("y2", y(pred.context.same_dow_avg))
+        .attr("stroke", "#22c55e")
+        .attr("stroke-width", 1.5)
+        .attr("stroke-dasharray", "6,4");
+
+      g.append("text")
+        .attr("x", w - 4)
+        .attr("y", y(pred.context.same_dow_avg) - 6)
+        .attr("text-anchor", "end")
+        .attr("fill", "#22c55e")
+        .attr("font-size", "10px")
+        .text(`${pred.day_of_week_name} avg: ${fmt(pred.context.same_dow_avg)}`);
+
+      const tooltip = d3.select("#tooltip");
+
+      g.selectAll(".hover-zone")
+        .data(chartData)
+        .join("rect")
+          .attr("class", "hover-zone")
+          .attr("x", (_, i) => x(i))
+          .attr("y", 0)
+          .attr("width", x.bandwidth())
+          .attr("height", h)
+          .attr("fill", "transparent")
+          .on("mousemove", function(event, d) {
+            const label = d.type === "predicted"
+              ? `<strong>Predicted: ${fmt(d.redemptions)}</strong><br>Range: ${fmt(d.ciLower)} – ${fmt(d.ciUpper)}`
+              : `<strong>${fmtDate(d.date)}</strong><br>Redemptions: ${fmt(d.redemptions)}`;
+            tooltip.style("opacity", 1)
+              .html(`<span class="tooltip-icon">&#9875;</span>${label}`)
+              .style("left", (event.clientX + 12) + "px")
+              .style("top", (event.clientY - 12) + "px");
+          })
+          .on("mouseleave", () => tooltip.style("opacity", 0));
+    }
+
+    /* ── Accuracy Table ── */
+    function renderAccuracy(history) {
+      const rows = history.slice().reverse();
+      const evaluated = rows.filter(r => r.actual !== "" && r.actual != null);
+
+      if (rows.length === 0) return;
+      d3.select("#accuracy-section").style("display", null);
+
+      const stats = d3.select("#accuracy-stats");
+      stats.html("");
+      if (evaluated.length > 0) {
+        const errors = evaluated.map(r => parseFloat(r.error_pct));
+        const avgError = d3.mean(errors);
+        const withinCI = evaluated.filter(r => {
+          const a = +r.actual, lo = +r.ci_lower, hi = +r.ci_upper;
+          return a >= lo && a <= hi;
+        }).length;
+        stats.html(
+          `Avg error: <span>${avgError.toFixed(1)}%</span> · ` +
+          `Within range: <span>${withinCI}/${evaluated.length}</span> · ` +
+          `Tracked: <span>${rows.length}</span>`
+        );
+      } else {
+        stats.html(`Tracked: <span>${rows.length}</span> · <span class="pending" style="color:#4e7a9e;font-weight:400;">Awaiting actuals</span>`);
+      }
+
+      const body = d3.select("#accuracy-body");
+      body.html("");
+
+      rows.forEach(r => {
+        const tr = body.append("tr");
+        tr.append("td").text(r.date);
+        tr.append("td").text(r.day);
+        tr.append("td").text(fmt(+r.predicted));
+
+        if (r.actual !== "" && r.actual != null) {
+          tr.append("td").text(fmt(+r.actual));
+
+          const errPct = parseFloat(r.error_pct);
+          const errClass = errPct <= 15 ? "error-good" : errPct <= 30 ? "error-ok" : "error-bad";
+          tr.append("td").attr("class", errClass).text(errPct.toFixed(1) + "%");
+
+          const inRange = +r.actual >= +r.ci_lower && +r.actual <= +r.ci_upper;
+          const ciTd = tr.append("td");
+          ciTd.text(inRange ? "Yes" : "No");
+          ciTd.append("span")
+            .attr("class", `within-ci ${inRange ? "yes" : "no"}`);
+        } else {
+          tr.append("td").attr("class", "pending").text("pending");
+          tr.append("td").attr("class", "pending").text("—");
+          tr.append("td").attr("class", "pending").text("—");
+        }
+      });
+    }
+
     window.addEventListener("resize", () => {
       const activeRange = d3.select("#trend-controls button.active").attr("data-range");
       renderTrendChart(activeRange === "all" ? "all" : +activeRange);
+      if (predictionData) drawPredictionChart(predictionData);
     });
   </script>
 

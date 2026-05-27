@@ -34,13 +34,16 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install requests pandas
+          pip install requests pandas lightgbm scikit-learn holidays
 
       - name: Fetch ferry data
         run: python scripts/fetch_ferry_data.py
 
       - name: Aggregate to daily and hourly
         run: python scripts/aggregate_daily.py
+
+      - name: Generate next-day prediction
+        run: python scripts/predict_tomorrow.py
 
       - name: Check for changes
         id: check_changes
