@@ -3,8 +3,8 @@
   "day_of_week_name": "Saturday",
   "predicted_redemptions": 8103,
   "confidence_interval": {
-    "lower": 4309,
-    "upper": 11897,
+    "lower": 4320,
+    "upper": 11886,
     "level": 0.8
   },
   "context": {
@@ -36,13 +36,13 @@
       },
       {
         "date": "2026-05-29",
-        "redemptions": 4078
+        "redemptions": 4682
       }
     ]
   },
   "model_info": {
-    "validation_mae": 1729,
-    "validation_r2": 0.424,
-    "generated_at": "2026-05-29T21:44:41Z"
+    "validation_mae": 1709,
+    "validation_r2": 0.426,
+    "generated_at": "2026-05-29T23:03:37Z"
   }
 }
