@@ -1,10 +1,10 @@
 {
   "prediction_date": "2026-05-30",
   "day_of_week_name": "Saturday",
-  "predicted_redemptions": 8103,
+  "predicted_redemptions": 8884,
   "confidence_interval": {
-    "lower": 4320,
-    "upper": 11886,
+    "lower": 5105,
+    "upper": 12663,
     "level": 0.8
   },
   "context": {
@@ -36,13 +36,13 @@
       },
       {
         "date": "2026-05-29",
-        "redemptions": 4682
+        "redemptions": 5117
       }
     ]
   },
   "model_info": {
-    "validation_mae": 1709,
-    "validation_r2": 0.426,
-    "generated_at": "2026-05-29T23:03:37Z"
+    "validation_mae": 1694,
+    "validation_r2": 0.428,
+    "generated_at": "2026-05-30T02:06:21Z"
   }
 }
