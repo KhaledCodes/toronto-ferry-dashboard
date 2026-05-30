@@ -134,16 +134,31 @@ def update_history(df, prediction, ci_lower, ci_upper, tomorrow):
     else:
         history = pd.DataFrame(columns=["date", "day", "predicted", "ci_lower", "ci_upper", "actual", "error_pct"])
 
+    # Only treat a date as final once a LATER day exists in the data. The most
+    # recent day is typically still being collected and reports a partial
+    # (often 0) total; finalizing it early locks in a wrong actual that never
+    # gets corrected.
+    latest_date = df["date"].max()
+
     if not history.empty:
         for i, row in history.iterrows():
-            if pd.isna(row.get("actual")) or row.get("actual") == "":
-                d = pd.Timestamp(row["date"])
-                if d in actuals.index:
-                    actual = int(actuals[d])
-                    history.at[i, "actual"] = actual
-                    predicted = int(row["predicted"])
-                    if actual > 0:
-                        history.at[i, "error_pct"] = round(abs(predicted - actual) / actual * 100, 1)
+            existing = row.get("actual")
+            # Re-evaluate rows that are unset OR were previously locked at a
+            # non-positive (incomplete) value.
+            if not (pd.isna(existing) or existing == "" or float(existing) <= 0):
+                continue
+
+            d = pd.Timestamp(row["date"])
+            if d >= latest_date or d not in actuals.index:
+                continue  # day not settled yet — retry on a later run
+
+            actual = int(actuals[d])
+            if actual <= 0:
+                continue  # still looks incomplete
+
+            history.at[i, "actual"] = actual
+            predicted = int(row["predicted"])
+            history.at[i, "error_pct"] = round(abs(predicted - actual) / actual * 100, 1)
 
     tomorrow_str = tomorrow.strftime("%Y-%m-%d")
     if history.empty or tomorrow_str not in history["date"].values:
