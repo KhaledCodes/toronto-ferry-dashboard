@@ -4,6 +4,8 @@ on:
   schedule:
     # Run every hour
     - cron: '0 * * * *'
+  push:
+    branches: [main]  # Deploy site immediately on a push (no data re-fetch)
   workflow_dispatch:  # Allow manual trigger
 
 permissions:
@@ -17,6 +19,9 @@ concurrency:
 
 jobs:
   update-data:
+    # Skip the fetch/predict pipeline on plain pushes — those only deploy the
+    # current site. Data refresh runs on the cron schedule and manual dispatch.
+    if: github.event_name != 'push'
     runs-on: ubuntu-latest
 
     steps:
@@ -67,6 +72,9 @@ jobs:
   deploy-pages:
     runs-on: ubuntu-latest
     needs: update-data
+    # Deploy when the data job succeeded (cron/dispatch) OR was skipped (push).
+    # Skip only if the data job actually failed or was cancelled.
+    if: always() && needs.update-data.result != 'failure' && needs.update-data.result != 'cancelled'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
