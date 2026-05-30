@@ -1,4 +1,4 @@
 date,day,predicted,ci_lower,ci_upper,actual,error_pct
-2026-05-28,Thursday,3247,0,6830,5279,38.5
+2026-05-28,Thursday,3247,0,6830,5279.0,38.5
 2026-05-29,Friday,1856,0,5580,,
 2026-05-30,Saturday,3776,0,7770,,
