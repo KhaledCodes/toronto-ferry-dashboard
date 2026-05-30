@@ -513,18 +513,21 @@
       hourlyData = hourly.filter(d => d.date !== null);
       renderKPIs();
       renderTrendChart(30);
-      if (prediction) {
-        predictionData = prediction;
-        renderPrediction(prediction);
-      }
-      if (history && history.length > 0) renderAccuracy(history);
 
+      // Wire up the range controls before the optional renders below, so a
+      // failure in renderPrediction/renderAccuracy can never disable them.
       d3.selectAll("#trend-controls button").on("click", function () {
         d3.selectAll("#trend-controls button").classed("active", false);
         d3.select(this).classed("active", true);
         const range = this.dataset.range;
         renderTrendChart(range === "all" ? "all" : +range);
       });
+
+      if (prediction) {
+        predictionData = prediction;
+        renderPrediction(prediction);
+      }
+      if (history && history.length > 0) renderAccuracy(history);
     });
 
     /* ── KPIs ── */
@@ -871,7 +874,12 @@
     /* ── Accuracy Table ── */
     function renderAccuracy(history) {
       const rows = history.slice().reverse();
-      const evaluated = rows.filter(r => r.actual !== "" && r.actual != null);
+      // Only count rows that have BOTH an actual and a numeric error_pct —
+      // a filled actual with a blank error_pct would make d3.mean undefined.
+      const evaluated = rows.filter(r =>
+        r.actual !== "" && r.actual != null &&
+        r.error_pct !== "" && r.error_pct != null && !isNaN(parseFloat(r.error_pct))
+      );
 
       if (rows.length === 0) return;
       d3.select("#accuracy-section").style("display", null);
