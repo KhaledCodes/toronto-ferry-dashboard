@@ -572,6 +572,7 @@
 
       const isHourly = rangeDays === 1;
       const source = isHourly ? hourlyData : allData;
+      if (!source || source.length === 0) return;  // data not loaded yet (e.g. early resize)
       const latestDate = source[source.length - 1].date;
       const data = rangeDays === "all"
         ? source
