@@ -1,8 +1,8 @@
 # Toronto Island Ferry Dashboard
 
-![Daily Update](https://github.com/KhaledCodes/toronto-ferry-dashboard/actions/workflows/daily_update.yml/badge.svg)
+![Hourly Update](https://github.com/KhaledCodes/toronto-ferry-dashboard/actions/workflows/hourly_update.yml/badge.svg)
 
-A live dashboard tracking Toronto Island Ferry ridership, built with D3.js and served via GitHub Pages. Data is refreshed daily from the Toronto Open Data API using GitHub Actions.
+A live dashboard tracking Toronto Island Ferry ridership, built with D3.js and served via GitHub Pages. Data comes from the Toronto Open Data API as 15-minute interval records. The feed updates irregularly and can stall for stretches, so a GitHub Actions pipeline polls it hourly to pick up new data and backfills as they land.
 
 ## Live Demo
 
@@ -10,7 +10,7 @@ A live dashboard tracking Toronto Island Ferry ridership, built with D3.js and s
 
 ## Features
 
-- **Live Data**: Automatically updated daily from Toronto Open Data
+- **Live Data**: Polled hourly from the Toronto Open Data 15-minute interval feed
 - **Multiple Time Scales**: 1D (hourly), 7D, 14D, 30D, 90D, 1Y, and all-time views
 - **Interactive Charts**: Hover tooltips, responsive D3.js area chart
 - **KPI Summary**: Latest day, 7-day total, peak day, and year-over-year comparison
@@ -21,7 +21,7 @@ A live dashboard tracking Toronto Island Ferry ridership, built with D3.js and s
 
 ## How It Works
 
-1. **GitHub Actions** runs daily at 8:00 AM UTC
+1. **GitHub Actions** runs hourly (and on demand)
 2. `fetch_ferry_data.py` pulls the latest ticket data from the Toronto Open Data API
 3. `aggregate_daily.py` aggregates to hourly and daily totals
 4. Updated CSVs are committed back to the repo
@@ -40,7 +40,7 @@ toronto-ferry-dashboard/
 │   ├── daily_totals.csv           # Daily redemption totals
 │   └── hourly_totals.csv          # Hourly redemption totals
 ├── .github/workflows/
-│   └── daily_update.yml           # GitHub Actions daily pipeline
+│   └── hourly_update.yml          # GitHub Actions hourly pipeline
 ├── archive/                       # Previous Streamlit + ML pipeline
 └── requirements.txt
 ```
