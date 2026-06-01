@@ -258,6 +258,7 @@
 
     .legend-swatch.actual { background: #4a9ede; }
     .legend-swatch.predicted { background: #e8943a; opacity: 0.85; }
+    .legend-swatch.nowcast { background: #4a9ede; opacity: 0.35; border: 1.5px dashed #4a9ede; }
     .legend-line {
       width: 16px;
       height: 2px;
@@ -425,6 +426,7 @@
       </div>
       <div class="prediction-legend">
         <div class="legend-item"><div class="legend-swatch actual"></div>Actual</div>
+        <div class="legend-item" id="legend-nowcast" style="display:none;"><div class="legend-swatch nowcast"></div>Today (est.)</div>
         <div class="legend-item"><div class="legend-swatch predicted"></div>Predicted</div>
         <div class="legend-item"><div class="legend-line"></div>Day-of-week avg</div>
       </div>
@@ -741,8 +743,13 @@
       const chartData = pred.context.last_7d.map(d => ({
         date: d3.timeParse("%Y-%m-%d")(d.date),
         redemptions: d.redemptions,
-        type: "actual",
+        type: d.nowcast ? "nowcast" : "actual",
+        observedPct: d.observed_pct,
       }));
+
+      // Show the "Today (est.)" legend item only when a nowcast bar is present.
+      const hasNowcast = chartData.some(d => d.type === "nowcast");
+      d3.select("#legend-nowcast").style("display", hasNowcast ? null : "none");
 
       chartData.push({
         date: d3.timeParse("%Y-%m-%d")(pred.prediction_date),
@@ -795,7 +802,9 @@
         .call(d3.axisBottom(x).tickFormat(i => {
           const d = chartData[i];
           const day = dayNames[d.date.getDay()];
-          return d.type === "predicted" ? `${day}*` : day;
+          if (d.type === "predicted") return `${day}*`;
+          if (d.type === "nowcast") return `${day}~`;
+          return day;
         }));
 
       g.append("g").attr("class", "axis")
@@ -820,6 +829,20 @@
             .attr("fill", "url(#pred-stripe)")
             .attr("stroke", "#e8943a")
             .attr("stroke-width", 1.5)
+            .attr("rx", 2);
+        } else if (d.type === "nowcast") {
+          // Today's full-day estimate scaled from partial data — faded with a
+          // dashed outline so it reads as an estimate, not a measured actual.
+          g.append("rect")
+            .attr("x", x(i))
+            .attr("y", y(d.redemptions))
+            .attr("width", x.bandwidth())
+            .attr("height", h - y(d.redemptions))
+            .attr("fill", barColor(d.date))
+            .attr("opacity", 0.3)
+            .attr("stroke", barColor(d.date))
+            .attr("stroke-width", 1.5)
+            .attr("stroke-dasharray", "4,3")
             .attr("rx", 2);
         } else {
           g.append("rect")
@@ -863,6 +886,8 @@
           .on("mousemove", function(event, d) {
             const label = d.type === "predicted"
               ? `<strong>Predicted: ${fmt(d.redemptions)}</strong><br>Range: ${fmt(d.ciLower)} – ${fmt(d.ciUpper)}`
+              : d.type === "nowcast"
+              ? `<strong>${fmtDate(d.date)} (today)</strong><br>Est. total: ${fmt(d.redemptions)}<br><span style="opacity:.75">nowcast from ~${d.observedPct}% of the day</span>`
               : `<strong>${fmtDate(d.date)}</strong><br>Redemptions: ${fmt(d.redemptions)}`;
             tooltip.style("opacity", 1)
               .html(`<span class="tooltip-icon">&#9875;</span>${label}`)
