@@ -751,6 +751,14 @@
       const hasNowcast = chartData.some(d => d.type === "nowcast");
       d3.select("#legend-nowcast").style("display", hasNowcast ? null : "none");
 
+      // Actual bars are colored by season (barColor), so match the Actual /
+      // Today (est.) legend swatches to the season of the days shown.
+      const seasonRef = chartData.filter(d => d.type !== "predicted").slice(-1)[0];
+      const seasonColor = seasonRef ? barColor(seasonRef.date) : "#4a9ede";
+      d3.select(".prediction-legend .legend-swatch.actual").style("background", seasonColor);
+      d3.select(".prediction-legend .legend-swatch.nowcast")
+        .style("background", seasonColor).style("border-color", seasonColor);
+
       chartData.push({
         date: d3.timeParse("%Y-%m-%d")(pred.prediction_date),
         redemptions: pred.predicted_redemptions,
