@@ -41,8 +41,15 @@
     .subtitle {
       color: #7ba7cc;
       font-size: 0.9rem;
-      margin-bottom: 2rem;
+      margin-bottom: 0.35rem;
       padding-left: 56px;
+    }
+    .last-updated {
+      color: #5e7a96;
+      font-size: 0.78rem;
+      margin: 0 0 2rem;
+      padding-left: 56px;
+      min-height: 1em;            /* reserve space so it doesn't shift on load */
     }
 
     /* KPI cards */
@@ -389,6 +396,7 @@
     <h1>Toronto Island Ferry</h1>
   </div>
   <p class="subtitle"><span class="live-dot"></span>Live ridership data from Toronto Harbour</p>
+  <p class="last-updated" id="last-updated"></p>
 
   <div class="kpis" id="kpis">
     <div class="loading">Loading data...</div>
@@ -530,7 +538,31 @@
         renderPrediction(prediction);
       }
       if (history && history.length > 0) renderAccuracy(history);
+      renderLastUpdated(prediction && prediction.model_info ? prediction.model_info.generated_at : null);
     });
+
+    /* ── Last updated ── */
+    function renderLastUpdated(iso) {
+      const el = d3.select("#last-updated");
+      if (iso) {
+        const when = new Date(iso);
+        const abs = when.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+        el.html(`Last updated: ${abs} <span style="opacity:.65">· ${relativeTime(when)}</span>`)
+          .attr("title", when.toString());
+      } else if (allData && allData.length) {
+        el.text(`Data current through ${fmtDate(allData[allData.length - 1].date)}`);
+      }
+    }
+
+    function relativeTime(d) {
+      const mins = Math.round((Date.now() - d.getTime()) / 60000);
+      if (mins < 1) return "just now";
+      if (mins < 60) return `${mins} min ago`;
+      const hrs = Math.round(mins / 60);
+      if (hrs < 24) return `${hrs} hour${hrs > 1 ? "s" : ""} ago`;
+      const days = Math.round(hrs / 24);
+      return `${days} day${days > 1 ? "s" : ""} ago`;
+    }
 
     /* ── KPIs ── */
     function renderKPIs() {
