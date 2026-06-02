@@ -538,20 +538,22 @@
         renderPrediction(prediction);
       }
       if (history && history.length > 0) renderAccuracy(history);
-      renderLastUpdated(prediction && prediction.model_info ? prediction.model_info.generated_at : null);
+      renderLastUpdated();
     });
 
-    /* ── Last updated ── */
-    function renderLastUpdated(iso) {
+    /* ── Latest data timestamp ── */
+    // Show how current the SOURCE DATA is (its latest timestamp), not when the
+    // pipeline ran — the feed lags the clock, so the data time is the honest one.
+    function renderLastUpdated() {
       const el = d3.select("#last-updated");
-      if (iso) {
-        const when = new Date(iso);
-        const abs = when.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
-        el.html(`Last updated: ${abs} <span style="opacity:.65">· ${relativeTime(when)}</span>`)
-          .attr("title", when.toString());
-      } else if (allData && allData.length) {
-        el.text(`Data current through ${fmtDate(allData[allData.length - 1].date)}`);
-      }
+      const hasHourly = hourlyData && hourlyData.length;
+      const src = hasHourly ? hourlyData : (allData && allData.length ? allData : null);
+      if (!src) return;
+      const latest = src.reduce((a, b) => (b.date > a.date ? b : a)).date;
+      const abs = latest.toLocaleString(undefined,
+        hasHourly ? { dateStyle: "medium", timeStyle: "short" } : { dateStyle: "medium" });
+      el.html(`Latest data: ${abs} <span style="opacity:.65">· ${relativeTime(latest)}</span>`)
+        .attr("title", latest.toString());
     }
 
     function relativeTime(d) {
