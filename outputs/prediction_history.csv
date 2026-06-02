@@ -4,4 +4,4 @@ date,day,predicted,ci_lower,ci_upper,actual,error_pct,locked
 2026-05-30,Saturday,3776,0,7770,12692.0,70.2,1
 2026-05-31,Sunday,10612,6833,14391,10948.0,3.1,1
 2026-06-01,Monday,5343,1406,9280,,,1
-2026-06-02,Tuesday,4250,0,8679,,,0
+2026-06-02,Tuesday,4594,0,9570,,,0
