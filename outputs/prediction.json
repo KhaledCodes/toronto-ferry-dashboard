@@ -36,15 +36,15 @@
       },
       {
         "date": "2026-06-30",
-        "redemptions": 9125,
+        "redemptions": 9376,
         "nowcast": true,
-        "observed_pct": 50
+        "observed_pct": 68
       }
     ]
   },
   "model_info": {
     "validation_mae": 2212,
     "validation_r2": 0.504,
-    "generated_at": "2026-06-30T18:29:56Z"
+    "generated_at": "2026-06-30T20:52:20Z"
   }
 }
