@@ -8,15 +8,15 @@
     "level": 0.8
   },
   "context": {
-    "same_dow_avg": 3972,
+    "same_dow_avg": 3971,
     "last_7d": [
       {
         "date": "2026-07-02",
-        "redemptions": 6617
+        "redemptions": 6613
       },
       {
         "date": "2026-07-03",
-        "redemptions": 9964
+        "redemptions": 9961
       },
       {
         "date": "2026-07-04",
@@ -24,27 +24,27 @@
       },
       {
         "date": "2026-07-05",
-        "redemptions": 13828
+        "redemptions": 13827
       },
       {
         "date": "2026-07-06",
-        "redemptions": 7900
+        "redemptions": 7894
       },
       {
         "date": "2026-07-07",
-        "redemptions": 9091
+        "redemptions": 9087
       },
       {
         "date": "2026-07-08",
-        "redemptions": 10898,
+        "redemptions": 9699,
         "nowcast": true,
-        "observed_pct": 68
+        "observed_pct": 84
       }
     ]
   },
   "model_info": {
-    "validation_mae": 2285,
+    "validation_mae": 2286,
     "validation_r2": 0.514,
-    "generated_at": "2026-07-08T20:58:07Z"
+    "generated_at": "2026-07-08T22:03:57Z"
   }
 }
