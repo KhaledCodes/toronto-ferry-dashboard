@@ -1,14 +1,14 @@
 {
-  "prediction_date": "2026-07-15",
-  "day_of_week_name": "Wednesday",
-  "predicted_redemptions": 8968,
+  "prediction_date": "2026-07-16",
+  "day_of_week_name": "Thursday",
+  "predicted_redemptions": 7803,
   "confidence_interval": {
-    "lower": 4349,
-    "upper": 13587,
+    "lower": 3920,
+    "upper": 11686,
     "level": 0.8
   },
   "context": {
-    "same_dow_avg": 7440,
+    "same_dow_avg": 4364,
     "last_7d": [
       {
         "date": "2026-07-08",
@@ -36,15 +36,13 @@
       },
       {
         "date": "2026-07-14",
-        "redemptions": 7200,
-        "nowcast": true,
-        "observed_pct": 98
+        "redemptions": 7298
       }
     ]
   },
   "model_info": {
-    "validation_mae": 2790,
-    "validation_r2": 0.524,
-    "generated_at": "2026-07-15T01:28:40Z"
+    "validation_mae": 2369,
+    "validation_r2": 0.649,
+    "generated_at": "2026-07-15T04:42:39Z"
   }
 }
