@@ -409,10 +409,10 @@
         <button data-range="1">1D</button>
         <button data-range="7">7D</button>
         <button data-range="14">14D</button>
-        <button data-range="30" class="active">30D</button>
+        <button data-range="30">30D</button>
         <button data-range="90">90D</button>
         <button data-range="365">1Y</button>
-        <button data-range="all">All</button>
+        <button data-range="all" class="active">All</button>
       </div>
     </div>
     <div id="trend-chart"></div>
@@ -522,7 +522,7 @@
       allData = daily.filter(d => d.date !== null);
       hourlyData = hourly.filter(d => d.date !== null);
       renderKPIs();
-      renderTrendChart(30);
+      renderTrendChart("all");
 
       // Wire up the range controls before the optional renders below, so a
       // failure in renderPrediction/renderAccuracy can never disable them.
@@ -955,14 +955,11 @@
       const stats = d3.select("#accuracy-stats");
       stats.html("");
       if (evaluated.length > 0) {
-        const errors = evaluated.map(r => parseFloat(r.error_pct));
-        const avgError = d3.mean(errors);
         const withinCI = evaluated.filter(r => {
           const a = +r.actual, lo = +r.ci_lower, hi = +r.ci_upper;
           return a >= lo && a <= hi;
         }).length;
         stats.html(
-          `Avg error: <span>${avgError.toFixed(1)}%</span> · ` +
           `Within range: <span>${withinCI}/${evaluated.length}</span> · ` +
           `Tracked: <span>${rows.length}</span>`
         );
