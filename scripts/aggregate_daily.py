@@ -8,6 +8,21 @@ outputs = Path(__file__).parent.parent / "outputs"
 
 df = pd.read_csv(outputs / "ferry_ticket_counts.csv", parse_dates=["Timestamp"])
 
+# Replace impossible spikes (e.g. the source's 123k reading on 2026-08-06 16:00)
+# with values interpolated from the surrounding 15-minute intervals.
+OUTLIER_THRESHOLD = 5000
+for col in ["Redemption Count", "Sales Count"]:
+    outliers = df[col] > OUTLIER_THRESHOLD
+    if outliers.any():
+        for _, row in df.loc[outliers].iterrows():
+            print(f"Outlier in {col} at {row['Timestamp']}: {row[col]} -> interpolating from neighbours")
+        df[col] = (
+            df[col].mask(outliers)
+            .interpolate(limit_direction="both")
+            .round()
+            .astype(int)
+        )
+
 # Daily totals
 df["date"] = df["Timestamp"].dt.date
 daily = df.groupby("date").agg(
