@@ -44,6 +44,9 @@ jobs:
       - name: Fetch ferry data
         run: python scripts/fetch_ferry_data.py
 
+      - name: Fetch weather data
+        run: python scripts/fetch_weather.py
+
       - name: Aggregate to daily and hourly
         run: python scripts/aggregate_daily.py
 

@@ -16,6 +16,7 @@ import holidays
 ROOT = Path(__file__).resolve().parent.parent
 DAILY_CSV = ROOT / "outputs" / "daily_totals.csv"
 HOURLY_CSV = ROOT / "outputs" / "hourly_totals.csv"
+WEATHER_CSV = ROOT / "outputs" / "weather_daily.csv"
 OUTPUT_JSON = ROOT / "outputs" / "prediction.json"
 HISTORY_CSV = ROOT / "outputs" / "prediction_history.csv"
 
@@ -30,7 +31,7 @@ LOCAL_TZ = ZoneInfo("America/Toronto")
 # A day's intraday data is considered complete once it reaches this hour.
 DAY_COMPLETE_HOUR = 23
 
-FEATURES = [
+BASE_FEATURES = [
     "day_of_week", "month", "day_of_month", "week_of_year", "year", "is_weekend",
     "dow_sin", "dow_cos", "month_sin", "month_cos", "doy_sin", "doy_cos",
     "lag_1d", "lag_7d", "lag_14d", "lag_28d", "lag_365d",
@@ -38,7 +39,29 @@ FEATURES = [
     "is_holiday",
 ]
 
+# Daily weather joined from outputs/weather_daily.csv (historical measurements
+# for training, tomorrow's forecast for prediction). LightGBM handles missing
+# values natively, so days without weather data simply contribute no signal.
+WEATHER_FEATURES = [
+    "tmax", "tmin", "precip_mm", "rain_mm", "snow_cm", "wind_max_kmh",
+]
+
+FEATURES = BASE_FEATURES + WEATHER_FEATURES
+
 ON_HOLIDAYS = holidays.Canada(prov="ON")
+
+
+def load_weather():
+    """Daily weather frame keyed by date, or an empty frame with the expected
+    columns if the CSV is missing (features then stay NaN and the model just
+    runs weather-blind, same as before weather was added)."""
+    if WEATHER_CSV.exists():
+        return pd.read_csv(WEATHER_CSV, parse_dates=["date"])[["date"] + WEATHER_FEATURES]
+    return pd.DataFrame(columns=["date"] + WEATHER_FEATURES)
+
+
+def add_weather(featured, weather):
+    return featured.merge(weather, on="date", how="left")
 
 
 def add_features(df):
@@ -159,9 +182,11 @@ def nowcast_partial_day(daily_df, hourly_df, profile):
     return df_nc, info
 
 
-def train(df):
-    featured = add_features(df)
-    featured = featured.dropna(subset=FEATURES)
+def train(df, weather):
+    featured = add_weather(add_features(df), weather)
+    # Drop only on the base features: weather gaps are fine (LightGBM treats
+    # NaN as "missing"), but dropping on them would discard training rows.
+    featured = featured.dropna(subset=BASE_FEATURES)
 
     train_set = featured.iloc[:-30]
     val = featured.iloc[-30:]
@@ -196,7 +221,7 @@ def train(df):
     return model, mae, r2, residual_std
 
 
-def forecast_horizon(model, df, residual_std, end_date):
+def forecast_horizon(model, df, weather, residual_std, end_date):
     """Recursively forecast each day from (last data day + 1) through end_date.
 
     Each day's prediction is fed back in as the lag basis for the next day, so a
@@ -217,7 +242,7 @@ def forecast_horizon(model, df, residual_std, end_date):
             [work, pd.DataFrame([{"date": cur, "redemptions": np.nan}])],
             ignore_index=True,
         )
-        feats = add_features(extended)
+        feats = add_weather(add_features(extended), weather)
         cur_features = feats[feats["date"] == cur][FEATURES]
 
         prediction = max(0, round(model.predict(cur_features)[0]))
@@ -344,13 +369,14 @@ def main():
     df = df.sort_values("date").reset_index(drop=True)
 
     hourly = pd.read_csv(HOURLY_CSV, parse_dates=["hour"])
+    weather = load_weather()
     profile = build_intraday_profile(hourly)
     df_nc, nc = nowcast_partial_day(df, hourly, profile)
 
     # Train on complete days only — never let today's partial total pollute the
     # validation split / residual_std (which sets the CI width).
     train_df = df.iloc[:-1] if nc["is_partial"] else df
-    model, mae, r2, residual_std = train(train_df)
+    model, mae, r2, residual_std = train(train_df, weather)
 
     # "Tomorrow" is the real-world next day in Toronto time. Forecast on df_nc so
     # today's lag is the nowcast (a sane full-day estimate) rather than its partial
@@ -359,7 +385,7 @@ def main():
     today = pd.Timestamp(datetime.now(LOCAL_TZ).date())
     real_tomorrow = today + timedelta(days=1)
     src = df_nc if nc["is_partial"] else df
-    forecasts = forecast_horizon(model, src, residual_std, real_tomorrow)
+    forecasts = forecast_horizon(model, src, weather, residual_std, real_tomorrow)
 
     headline = next((f for f in forecasts if f["date"] == real_tomorrow), forecasts[-1])
     tomorrow = headline["date"]
