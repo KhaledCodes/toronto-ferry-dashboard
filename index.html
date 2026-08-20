@@ -10,8 +10,8 @@
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #0b1e3d;
-      color: #e2e8f0;
+      background: #ffffff;
+      color: #1e293b;
       padding: 2rem;
       max-width: 1200px;
       margin: 0 auto;
@@ -35,11 +35,11 @@
     h1 {
       font-size: 1.8rem;
       font-weight: 600;
-      color: #e8f4ff;
+      color: #10294a;
     }
 
     .subtitle {
-      color: #7ba7cc;
+      color: #56748f;
       font-size: 0.9rem;
       margin-bottom: 0.35rem;
       padding-left: 56px;
@@ -61,10 +61,10 @@
     }
 
     .kpi {
-      background: linear-gradient(135deg, #122a4e, #163357);
+      background: linear-gradient(135deg, #f7fafd, #eef4fa);
       border-radius: 10px;
       padding: 1.25rem;
-      border: 1px solid #1e4976;
+      border: 1px solid #d0dfec;
       position: relative;
       overflow: hidden;
     }
@@ -87,7 +87,7 @@
 
     .kpi-label {
       font-size: 0.8rem;
-      color: #7ba7cc;
+      color: #56748f;
       text-transform: uppercase;
       letter-spacing: 0.05em;
       margin-bottom: 0.5rem;
@@ -96,7 +96,7 @@
     .kpi-value {
       font-size: 1.8rem;
       font-weight: 700;
-      color: #4a9ede;
+      color: #1d6fb8;
     }
 
     .kpi-detail {
@@ -107,11 +107,11 @@
 
     /* Chart sections */
     .chart-section {
-      background: linear-gradient(135deg, #122a4e, #163357);
+      background: linear-gradient(135deg, #f7fafd, #eef4fa);
       border-radius: 10px;
       padding: 1.5rem;
       margin-bottom: 1.5rem;
-      border: 1px solid #1e4976;
+      border: 1px solid #d0dfec;
       position: relative;
       overflow: hidden;
     }
@@ -121,23 +121,26 @@
       justify-content: space-between;
       align-items: center;
       margin-bottom: 1rem;
+      flex-wrap: wrap;
+      gap: 0.5rem;
     }
 
     .chart-title {
       font-size: 1.1rem;
       font-weight: 600;
-      color: #e8f4ff;
+      color: #10294a;
     }
 
     .chart-controls {
       display: flex;
       gap: 0.5rem;
+      flex-wrap: wrap;
     }
 
     .chart-controls button {
-      background: #1a3f6b;
-      color: #7ba7cc;
-      border: 1px solid #24567f;
+      background: #f0f5fa;
+      color: #4e7a9e;
+      border: 1px solid #c9dcec;
       padding: 0.35rem 0.75rem;
       border-radius: 6px;
       font-size: 0.75rem;
@@ -145,18 +148,18 @@
       transition: all 0.15s;
     }
 
-    .chart-controls button:hover { background: #24567f; color: #e8f4ff; }
-    .chart-controls button.active { background: #003DA5; color: #ffffff; border-color: #4a9ede; }
+    .chart-controls button:hover { background: #dbe8f4; color: #10294a; }
+    .chart-controls button.active { background: #003DA5; color: #ffffff; border-color: #1d6fb8; }
 
     /* D3 chart styles */
-    .axis text { fill: #5a8ab5; font-size: 11px; }
-    .axis path, .axis line { stroke: #1e4976; }
-    .grid line { stroke: #152d50; }
+    .axis text { fill: #56748f; font-size: 11px; }
+    .axis path, .axis line { stroke: #d0dfec; }
+    .grid line { stroke: #e9f0f7; }
 
     .tooltip {
       position: fixed;
-      background: #1a3f6b;
-      color: #e8f4ff;
+      background: #ffffff;
+      color: #10294a;
       padding: 0.5rem 0.75rem;
       border-radius: 6px;
       font-size: 0.8rem;
@@ -164,8 +167,8 @@
       opacity: 0;
       transition: opacity 0.15s;
       white-space: nowrap;
-      border: 1px solid #24567f;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      border: 1px solid #c9dcec;
+      box-shadow: 0 4px 12px rgba(15, 42, 74, 0.15);
     }
 
     .tooltip-icon {
@@ -229,12 +232,12 @@
     .prediction-value {
       font-size: 2.2rem;
       font-weight: 700;
-      color: #e8943a;
+      color: #cf7420;
     }
 
     .prediction-date {
       font-size: 0.95rem;
-      color: #7ba7cc;
+      color: #56748f;
     }
 
     .prediction-range {
@@ -248,7 +251,7 @@
       gap: 1rem;
       align-items: center;
       font-size: 0.75rem;
-      color: #7ba7cc;
+      color: #56748f;
     }
 
     .legend-item {
@@ -280,7 +283,7 @@
       padding: 0.7rem 1rem;
       margin-bottom: 1.5rem;
       font-size: 0.82rem;
-      color: #c8a66a;
+      color: #8a6a2f;
       line-height: 1.5;
     }
 
@@ -298,11 +301,11 @@
       display: flex;
       gap: 1.5rem;
       font-size: 0.8rem;
-      color: #7ba7cc;
+      color: #56748f;
     }
 
     .accuracy-stats span {
-      color: #4a9ede;
+      color: #1d6fb8;
       font-weight: 600;
     }
 
@@ -315,18 +318,18 @@
     .accuracy-table th {
       text-align: left;
       padding: 0.6rem 0.75rem;
-      color: #7ba7cc;
+      color: #56748f;
       font-weight: 600;
       font-size: 0.75rem;
       text-transform: uppercase;
       letter-spacing: 0.04em;
-      border-bottom: 1px solid #1e4976;
+      border-bottom: 1px solid #d0dfec;
     }
 
     .accuracy-table td {
       padding: 0.55rem 0.75rem;
-      border-bottom: 1px solid #122a4e;
-      color: #c8dae8;
+      border-bottom: 1px solid #e9f0f7;
+      color: #33475c;
     }
 
     .accuracy-table tr:hover td {
@@ -338,9 +341,9 @@
       font-style: italic;
     }
 
-    .error-good { color: #22c55e; }
-    .error-ok { color: #e8943a; }
-    .error-bad { color: #e05252; }
+    .error-good { color: #16a34a; }
+    .error-ok { color: #c77414; }
+    .error-bad { color: #cc3f3f; }
 
     .within-ci {
       display: inline-block;
@@ -364,7 +367,7 @@
     }
 
     .footer a {
-      color: #4a9ede;
+      color: #1d6fb8;
       text-decoration: none;
     }
 
@@ -387,8 +390,8 @@
       <rect x="28" y="22" width="8" height="8" rx="1" fill="#e8943a" opacity="0.9"/>
       <rect x="30" y="17" width="4" height="5" rx="1" fill="#c0392b" opacity="0.7"/>
       <!-- Smoke puff -->
-      <circle cx="32" cy="14" r="2.5" fill="#7ba7cc" opacity="0.4"/>
-      <circle cx="36" cy="11" r="2" fill="#7ba7cc" opacity="0.25"/>
+      <circle cx="32" cy="14" r="2.5" fill="#56748f" opacity="0.4"/>
+      <circle cx="36" cy="11" r="2" fill="#56748f" opacity="0.25"/>
       <!-- Water line -->
       <path d="M4 50 Q12 46 20 50 Q28 54 36 50 Q44 46 52 50 Q60 54 64 50" stroke="#4a9ede" stroke-width="2" fill="none" opacity="0.5"/>
       <path d="M4 54 Q12 50 20 54 Q28 58 36 54 Q44 50 52 54 Q60 58 64 54" stroke="#4a9ede" stroke-width="1.5" fill="none" opacity="0.3"/>
@@ -505,7 +508,7 @@
       return "#6ba3c9";                          // winter: Jan 1 – Mar 19
     }
 
-    const kpiIcons = ["&#9875;", "&#9978;", "&#9733;", "&#128506;"];
+    const kpiIcons = ["&#9875;", "&#9978;", "&#128197;", "&#128198;", "&#9733;"];
 
     Promise.all([
       d3.csv(DAILY_URL, d => ({
@@ -583,11 +586,23 @@
       const thisYear = allData.filter(d => d.date.getFullYear() === latest.date.getFullYear());
       const peak = thisYear.reduce((a, b) => a.redemptions > b.redemptions ? a : b);
 
+      // Rolling windows, each compared against the same window one year earlier
+      const sumBack = (daysEnd, daysSpan) => d3.sum(
+        allData.filter(d =>
+          d.date > d3.timeDay.offset(latest.date, -daysEnd - daysSpan) &&
+          d.date <= d3.timeDay.offset(latest.date, -daysEnd)
+        ), d => d.redemptions);
+      const monthTotal = sumBack(0, 30);
+      const lastYearMonthTotal = sumBack(365, 30);
+      const yearTotal = sumBack(0, 365);
+      const priorYearTotal = sumBack(365, 365);
+
       const kpis = [
         { label: "Latest Day", value: fmt(latest.redemptions), detail: fmtDate(latest.date) },
         { label: "Last 7 Days", value: fmt(weekTotal), detail: `vs ${fmt(lastYearWeekTotal)} last year` },
+        { label: "Last 30 Days", value: fmt(monthTotal), detail: `vs ${fmt(lastYearMonthTotal)} last year` },
+        { label: "Last 365 Days", value: fmt(yearTotal), detail: `vs ${fmt(priorYearTotal)} prior year` },
         { label: `Peak Day (${latest.date.getFullYear()})`, value: fmt(peak.redemptions), detail: fmtDate(peak.date) },
-        { label: "Data Range", value: `${latest.date.getFullYear() - allData[0].date.getFullYear()}+ yrs`, detail: `${fmtDateShort(allData[0].date)} ${allData[0].date.getFullYear()} – ${fmtDateShort(latest.date)} ${latest.date.getFullYear()}` },
       ];
 
       const container = d3.select("#kpis");
@@ -702,7 +717,7 @@
       seasons.forEach((s, i) => {
         const item = legend.append("g").attr("transform", `translate(${i * 68}, 0)`);
         item.append("rect").attr("width", 10).attr("height", 10).attr("rx", 2).attr("fill", s.color);
-        item.append("text").attr("x", 14).attr("y", 9).attr("fill", "#7ba7cc").attr("font-size", "11px").text(s.label);
+        item.append("text").attr("x", 14).attr("y", 9).attr("fill", "#56748f").attr("font-size", "11px").text(s.label);
       });
 
       const barWidth = Math.max(1, Math.min(20, (w / data.length) - 1));
