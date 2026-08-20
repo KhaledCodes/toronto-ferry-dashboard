@@ -42,8 +42,11 @@ BASE_FEATURES = [
 # Daily weather joined from outputs/weather_daily.csv (historical measurements
 # for training, tomorrow's forecast for prediction). LightGBM handles missing
 # values natively, so days without weather data simply contribute no signal.
+# Rain enters only as daytime_rain_mm (rain during riding hours): with a daily
+# total in the mix the model discounts days where rain fell overnight and no
+# rider ever saw it (2026-08-19 was a 46% miss for exactly that reason).
 WEATHER_FEATURES = [
-    "tmax", "tmin", "precip_mm", "rain_mm", "snow_cm", "wind_max_kmh",
+    "tmax", "tmin", "snow_cm", "wind_max_kmh", "daytime_rain_mm",
 ]
 
 FEATURES = BASE_FEATURES + WEATHER_FEATURES
@@ -56,7 +59,9 @@ def load_weather():
     columns if the CSV is missing (features then stay NaN and the model just
     runs weather-blind, same as before weather was added)."""
     if WEATHER_CSV.exists():
-        return pd.read_csv(WEATHER_CSV, parse_dates=["date"])[["date"] + WEATHER_FEATURES]
+        w = pd.read_csv(WEATHER_CSV, parse_dates=["date"])
+        # reindex tolerates a stale CSV missing newer columns (they stay NaN)
+        return w.reindex(columns=["date"] + WEATHER_FEATURES)
     return pd.DataFrame(columns=["date"] + WEATHER_FEATURES)
 
 

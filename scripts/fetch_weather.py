@@ -36,12 +36,18 @@ COLUMN_NAMES = {
 
 OUT_PATH = Path(__file__).parent.parent / "outputs" / "weather_daily.csv"
 
+# A daily precipitation total can't tell overnight rain from rain that actually
+# deters riders (2026-08-19: 7.7mm total but ~90% fell 3-7am, and ridership was
+# normal). daytime_rain_mm sums only the hours when people ride ferries.
+DAYTIME_START_HOUR, DAYTIME_END_HOUR = 9, 21
+
 
 def fetch_daily(url, extra_params):
     params = {
         "latitude": LAT,
         "longitude": LON,
         "daily": DAILY_VARS,
+        "hourly": "precipitation",
         "timezone": "America/Toronto",
         **extra_params,
     }
@@ -50,7 +56,16 @@ def fetch_daily(url, extra_params):
         raise RuntimeError(f"Unexpected Open-Meteo response: {payload}")
     df = pd.DataFrame(payload["daily"]).rename(columns=COLUMN_NAMES)
     df["date"] = pd.to_datetime(df["date"])
-    return df
+
+    hourly = pd.DataFrame(payload["hourly"])
+    hourly["date"] = pd.to_datetime(hourly["time"].str[:10])
+    hourly["hour"] = hourly["time"].str[11:13].astype(int)
+    daytime = (
+        hourly[hourly["hour"].between(DAYTIME_START_HOUR, DAYTIME_END_HOUR)]
+        .groupby("date")["precipitation"].sum()
+        .rename("daytime_rain_mm")
+    )
+    return df.merge(daytime, on="date", how="left")
 
 
 def main():
