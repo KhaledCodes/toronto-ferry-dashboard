@@ -8,6 +8,13 @@ outputs = Path(__file__).parent.parent / "outputs"
 
 df = pd.read_csv(outputs / "ferry_ticket_counts.csv", parse_dates=["Timestamp"])
 
+# The City's dump sometimes serves every row twice (seen Aug 14-16 2026), which
+# silently doubles every total. Keep one row per timestamp.
+dupes = df.duplicated(subset="Timestamp").sum()
+if dupes:
+    print(f"Dropping {dupes} duplicate-timestamp rows from source data")
+    df = df.drop_duplicates(subset="Timestamp", keep="first")
+
 # Replace impossible spikes (e.g. the source's 123k reading on 2026-08-06 16:00)
 # with values interpolated from the surrounding 15-minute intervals.
 OUTLIER_THRESHOLD = 5000
