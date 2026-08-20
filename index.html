@@ -486,6 +486,8 @@
     const HOURLY_URL = "outputs/hourly_totals.csv";
     const PREDICTION_URL = "outputs/prediction.json";
     const HISTORY_URL = "outputs/prediction_history.csv";
+    const WEATHER_DAILY_URL = "outputs/weather_daily.csv";
+    const WEATHER_HOURLY_URL = "outputs/weather_hourly.csv";
 
     const fmt = d3.format(",");
     const fmtDate = d3.timeFormat("%b %d, %Y");
@@ -495,6 +497,8 @@
     let allData = [];
     let hourlyData = [];
     let predictionData = null;
+    let tempByDay = new Map();   // date (ms) -> daily max temp °C
+    let tempByHour = new Map();  // hour (ms) -> temp °C (recent days only)
 
     /* Season-based bar color */
     function barColor(date) {
@@ -521,9 +525,19 @@
       })),
       d3.json(PREDICTION_URL).catch(() => null),
       d3.csv(HISTORY_URL).catch(() => null),
-    ]).then(([daily, hourly, prediction, history]) => {
+      d3.csv(WEATHER_DAILY_URL, d => ({
+        date: d3.timeParse("%Y-%m-%d")(d.date),
+        temp: +d.tmax,
+      })).catch(() => null),
+      d3.csv(WEATHER_HOURLY_URL, d => ({
+        date: d3.timeParse("%Y-%m-%dT%H:%M")(d.time),
+        temp: +d.temp_c,
+      })).catch(() => null),
+    ]).then(([daily, hourly, prediction, history, wxDaily, wxHourly]) => {
       allData = daily.filter(d => d.date !== null);
       hourlyData = hourly.filter(d => d.date !== null);
+      tempByDay = new Map((wxDaily || []).filter(d => d.date && isFinite(d.temp)).map(d => [+d.date, d.temp]));
+      tempByHour = new Map((wxHourly || []).filter(d => d.date && isFinite(d.temp)).map(d => [+d.date, d.temp]));
       renderKPIs();
       renderTrendChart("all");
 
@@ -629,9 +643,25 @@
         ? source
         : source.filter(d => d.date >= d3.timeDay.offset(latestDate, -rangeDays));
 
+      // Temperature overlay: daily max temp, or actual hourly temp on the 1D view
+      const tempMap = isHourly ? tempByHour : tempByDay;
+      let tempSeries = data
+        .map(d => ({ date: d.date, temp: tempMap.get(+d.date) }))
+        .filter(d => d.temp !== undefined);
+      // On wide ranges the day-to-day jitter buries the chart; show the 7-day
+      // rolling average instead (tooltips still report the exact daily value).
+      if (!isHourly && tempSeries.length > 200) {
+        tempSeries = tempSeries.map((d, i, arr) => {
+          const win = arr.slice(Math.max(0, i - 3), i + 4);
+          return { date: d.date, temp: d3.mean(win, p => p.temp) };
+        });
+      }
+      const showTemp = tempSeries.length > 1;
+      const tempLabel = isHourly ? "Temp" : "Max temp";
+
       const width = container.node().clientWidth;
       const height = 350;
-      const margin = { top: 20, right: 20, bottom: 40, left: 55 };
+      const margin = { top: 20, right: showTemp ? 48 : 20, bottom: 40, left: 55 };
       const w = width - margin.left - margin.right;
       const h = height - margin.top - margin.bottom;
 
@@ -713,12 +743,18 @@
         { label: "Summer", color: "#e05252" },
         { label: "Fall", color: "#e8943a" },
       ];
-      const legend = g.append("g").attr("transform", `translate(${w - 260}, -5)`);
+      const legend = g.append("g").attr("transform", `translate(${w - (showTemp ? 345 : 260)}, -5)`);
       seasons.forEach((s, i) => {
         const item = legend.append("g").attr("transform", `translate(${i * 68}, 0)`);
         item.append("rect").attr("width", 10).attr("height", 10).attr("rx", 2).attr("fill", s.color);
         item.append("text").attr("x", 14).attr("y", 9).attr("fill", "#56748f").attr("font-size", "11px").text(s.label);
       });
+      if (showTemp) {
+        const item = legend.append("g").attr("transform", "translate(272, 0)");
+        item.append("line").attr("x1", 0).attr("x2", 14).attr("y1", 5).attr("y2", 5)
+          .attr("stroke", "#7c3aed").attr("stroke-width", 2);
+        item.append("text").attr("x", 18).attr("y", 9).attr("fill", "#56748f").attr("font-size", "11px").text(tempLabel);
+      }
 
       const barWidth = Math.max(1, Math.min(20, (w / data.length) - 1));
 
@@ -733,6 +769,24 @@
           .attr("fill", d => barColor(d.date))
           .attr("opacity", 0.85)
           .attr("rx", barWidth > 3 ? 1.5 : 0);
+
+      /* Temperature line on its own right-hand °C scale */
+      if (showTemp) {
+        const [tMin, tMax] = d3.extent(tempSeries, d => d.temp);
+        const y2 = d3.scaleLinear()
+          .domain([Math.floor(tMin - 2), Math.ceil(tMax + 2)])
+          .range([h, 0]);
+        g.append("g").attr("class", "axis")
+          .attr("transform", `translate(${w},0)`)
+          .call(d3.axisRight(y2).ticks(5).tickFormat(t => t + "°"));
+        g.append("path")
+          .datum(tempSeries)
+          .attr("fill", "none")
+          .attr("stroke", "#7c3aed")
+          .attr("stroke-width", 1.5)
+          .attr("opacity", 0.75)
+          .attr("d", d3.line().x(d => x(d.date)).y(d => y2(d.temp)));
+      }
 
       const tooltip = d3.select("#tooltip");
       const bisect = d3.bisector(d => d.date).left;
@@ -758,8 +812,10 @@
           const d = date - d0.date > d1.date - date ? d1 : d0;
           focus.style("display", null).attr("cx", x(d.date)).attr("cy", y(d.redemptions));
           const label = isHourly ? fmtHour(d.date) : fmtDate(d.date);
+          const temp = tempMap.get(+d.date);
+          const tempLine = temp !== undefined ? `<br>${tempLabel}: ${temp.toFixed(1)}&deg;C` : "";
           tooltip.style("opacity", 1)
-            .html(`<span class="tooltip-icon">&#9875;</span><strong>${label}</strong><br>Redemptions: ${fmt(d.redemptions)}`)
+            .html(`<span class="tooltip-icon">&#9875;</span><strong>${label}</strong><br>Redemptions: ${fmt(d.redemptions)}${tempLine}`)
             .style("left", (event.clientX + 12) + "px")
             .style("top", (event.clientY - 12) + "px");
         })

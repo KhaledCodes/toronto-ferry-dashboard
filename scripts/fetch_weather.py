@@ -35,6 +35,7 @@ COLUMN_NAMES = {
 }
 
 OUT_PATH = Path(__file__).parent.parent / "outputs" / "weather_daily.csv"
+HOURLY_OUT_PATH = Path(__file__).parent.parent / "outputs" / "weather_hourly.csv"
 
 # A daily precipitation total can't tell overnight rain from rain that actually
 # deters riders (2026-08-19: 7.7mm total but ~90% fell 3-7am, and ridership was
@@ -43,11 +44,12 @@ DAYTIME_START_HOUR, DAYTIME_END_HOUR = 9, 21
 
 
 def fetch_daily(url, extra_params):
+    """Returns (daily_df, hourly_df) for the requested range."""
     params = {
         "latitude": LAT,
         "longitude": LON,
         "daily": DAILY_VARS,
-        "hourly": "precipitation",
+        "hourly": "precipitation,temperature_2m",
         "timezone": "America/Toronto",
         **extra_params,
     }
@@ -65,11 +67,11 @@ def fetch_daily(url, extra_params):
         .groupby("date")["precipitation"].sum()
         .rename("daytime_rain_mm")
     )
-    return df.merge(daytime, on="date", how="left")
+    return df.merge(daytime, on="date", how="left"), hourly
 
 
 def main():
-    archive = fetch_daily(
+    archive, _ = fetch_daily(
         "https://archive-api.open-meteo.com/v1/archive",
         {"start_date": START_DATE, "end_date": date.today().isoformat()},
     )
@@ -77,11 +79,16 @@ def main():
     archive = archive.dropna(subset=["tmax"])
     archive["is_forecast"] = 0
 
-    forecast = fetch_daily(
+    forecast, forecast_hourly = fetch_daily(
         "https://api.open-meteo.com/v1/forecast",
         {"past_days": 14, "forecast_days": 3},
     )
     forecast["is_forecast"] = 1
+
+    # Recent hourly temperatures for the dashboard's 1-day (hourly) chart view.
+    hourly_out = forecast_hourly.rename(columns={"temperature_2m": "temp_c"})
+    hourly_out[["time", "temp_c"]].to_csv(HOURLY_OUT_PATH, index=False)
+    print(f"Saved {len(hourly_out)} hourly temperature rows to {HOURLY_OUT_PATH}")
 
     # Archive rows win; forecast fills the gap between archive and tomorrow.
     combined = (
