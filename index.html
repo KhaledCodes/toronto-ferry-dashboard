@@ -105,6 +105,19 @@
       margin-top: 0.25rem;
     }
 
+    /* Mini top-days table inside a KPI card */
+    .kpi-rows { margin-top: 0.15rem; }
+    .kpi-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-size: 0.78rem;
+      padding: 0.12rem 0;
+    }
+    .kpi-row .rank { color: #4e7a9e; width: 1.1rem; }
+    .kpi-row .date { color: #33475c; flex: 1; }
+    .kpi-row .val { color: #1d6fb8; font-weight: 600; }
+
     /* Chart sections */
     .chart-section {
       background: linear-gradient(135deg, #f7fafd, #eef4fa);
@@ -497,8 +510,25 @@
     let allData = [];
     let hourlyData = [];
     let predictionData = null;
-    let tempByDay = new Map();   // date (ms) -> daily max temp °C
-    let tempByHour = new Map();  // hour (ms) -> temp °C (recent days only)
+    let wxByDay = new Map();   // date (ms) -> {temp: max °C, rain: daytime mm, code}
+    let wxByHour = new Map();  // hour (ms) -> {temp °C, rain mm, code} (recent days only)
+
+    /* WMO weather code -> icon + label */
+    function weatherCondition(code) {
+      if (code === undefined || isNaN(code)) return null;
+      if (code === 0) return { icon: "☀️", label: "Clear" };
+      if (code === 1) return { icon: "🌤", label: "Mainly clear" };
+      if (code === 2) return { icon: "⛅", label: "Partly cloudy" };
+      if (code === 3) return { icon: "☁️", label: "Overcast" };
+      if (code === 45 || code === 48) return { icon: "🌫", label: "Fog" };
+      if (code >= 51 && code <= 57) return { icon: "🌦", label: "Drizzle" };
+      if (code >= 61 && code <= 67) return { icon: "🌧", label: "Rain" };
+      if (code >= 71 && code <= 77) return { icon: "❄️", label: "Snow" };
+      if (code >= 80 && code <= 82) return { icon: "🌧", label: "Showers" };
+      if (code === 85 || code === 86) return { icon: "🌨", label: "Snow showers" };
+      if (code >= 95) return { icon: "⛈", label: "Thunderstorm" };
+      return null;
+    }
 
     /* Season-based bar color */
     function barColor(date) {
@@ -512,7 +542,7 @@
       return "#6ba3c9";                          // winter: Jan 1 – Mar 19
     }
 
-    const kpiIcons = ["&#9875;", "&#9978;", "&#128197;", "&#128198;", "&#9733;"];
+    const kpiIcons = ["&#9875;", "&#9978;", "&#128197;", "&#128198;"];
 
     Promise.all([
       d3.csv(DAILY_URL, d => ({
@@ -528,16 +558,20 @@
       d3.csv(WEATHER_DAILY_URL, d => ({
         date: d3.timeParse("%Y-%m-%d")(d.date),
         temp: +d.tmax,
+        rain: +d.daytime_rain_mm,
+        code: +d.wcode,
       })).catch(() => null),
       d3.csv(WEATHER_HOURLY_URL, d => ({
         date: d3.timeParse("%Y-%m-%dT%H:%M")(d.time),
         temp: +d.temp_c,
+        rain: +d.precip_mm,
+        code: +d.wcode,
       })).catch(() => null),
     ]).then(([daily, hourly, prediction, history, wxDaily, wxHourly]) => {
       allData = daily.filter(d => d.date !== null);
       hourlyData = hourly.filter(d => d.date !== null);
-      tempByDay = new Map((wxDaily || []).filter(d => d.date && isFinite(d.temp)).map(d => [+d.date, d.temp]));
-      tempByHour = new Map((wxHourly || []).filter(d => d.date && isFinite(d.temp)).map(d => [+d.date, d.temp]));
+      wxByDay = new Map((wxDaily || []).filter(d => d.date && isFinite(d.temp)).map(d => [+d.date, d]));
+      wxByHour = new Map((wxHourly || []).filter(d => d.date && isFinite(d.temp)).map(d => [+d.date, d]));
       renderKPIs();
       renderTrendChart("all");
 
@@ -598,7 +632,7 @@
       const lastYearWeekTotal = d3.sum(lastYear7, d => d.redemptions);
 
       const thisYear = allData.filter(d => d.date.getFullYear() === latest.date.getFullYear());
-      const peak = thisYear.reduce((a, b) => a.redemptions > b.redemptions ? a : b);
+      const top5 = thisYear.slice().sort((a, b) => b.redemptions - a.redemptions).slice(0, 5);
 
       // Rolling windows, each compared against the same window one year earlier
       const sumBack = (daysEnd, daysSpan) => d3.sum(
@@ -616,7 +650,6 @@
         { label: "Last 7 Days", value: fmt(weekTotal), detail: `vs ${fmt(lastYearWeekTotal)} last year` },
         { label: "Last 30 Days", value: fmt(monthTotal), detail: `vs ${fmt(lastYearMonthTotal)} last year` },
         { label: "Last 365 Days", value: fmt(yearTotal), detail: `vs ${fmt(priorYearTotal)} prior year` },
-        { label: `Peak Day (${latest.date.getFullYear()})`, value: fmt(peak.redemptions), detail: fmtDate(peak.date) },
       ];
 
       const container = d3.select("#kpis");
@@ -627,6 +660,18 @@
         card.append("div").attr("class", "kpi-label").text(k.label);
         card.append("div").attr("class", "kpi-value").text(k.value);
         card.append("div").attr("class", "kpi-detail").text(k.detail);
+      });
+
+      // Top-5 days card: a mini leaderboard instead of a single number
+      const topCard = container.append("div").attr("class", "kpi");
+      topCard.append("div").attr("class", "kpi-icon").html("&#9733;");
+      topCard.append("div").attr("class", "kpi-label").text(`Top Days (${latest.date.getFullYear()})`);
+      const rows = topCard.append("div").attr("class", "kpi-rows");
+      top5.forEach((d, i) => {
+        const row = rows.append("div").attr("class", "kpi-row");
+        row.append("span").attr("class", "rank").text(i + 1);
+        row.append("span").attr("class", "date").text(fmtDateShort(d.date));
+        row.append("span").attr("class", "val").text(fmt(d.redemptions));
       });
     }
 
@@ -643,11 +688,32 @@
         ? source
         : source.filter(d => d.date >= d3.timeDay.offset(latestDate, -rangeDays));
 
-      // Temperature overlay: daily max temp, or actual hourly temp on the 1D view
-      const tempMap = isHourly ? tempByHour : tempByDay;
+      // Weather overlays: daily values, or actual hourly values on the 1D view
+      const wxMap = isHourly ? wxByHour : wxByDay;
       let tempSeries = data
-        .map(d => ({ date: d.date, temp: tempMap.get(+d.date) }))
+        .map(d => ({ date: d.date, temp: (wxMap.get(+d.date) || {}).temp }))
         .filter(d => d.temp !== undefined);
+      // Rain: per-bar on zoomed-in views; aggregated to monthly totals on wide
+      // ranges, where thousands of 1px daily bars would just be blue haze.
+      const rainMonthly = !isHourly && data.length > 100;
+      let rainSeries;
+      if (rainMonthly) {
+        rainSeries = d3.rollups(
+          data.map(d => ({ date: d.date, rain: (wxByDay.get(+d.date) || {}).rain || 0 })),
+          v => d3.sum(v, p => p.rain),
+          d => d3.timeMonth(d.date).getTime()
+        ).map(([m, total]) => ({
+          start: new Date(m),
+          end: d3.timeMonth.offset(new Date(m), 1),
+          rain: total,
+        })).filter(m => m.rain > 0);
+      } else {
+        rainSeries = data
+          .map(d => ({ date: d.date, rain: (wxMap.get(+d.date) || {}).rain }))
+          .filter(d => d.rain > 0);
+      }
+      const showRain = rainSeries.length > 0;
+      const rainLabel = rainMonthly ? "Monthly precipitation" : "Precipitation";
       // On wide ranges the day-to-day jitter buries the chart; show the 7-day
       // rolling average instead (tooltips still report the exact daily value).
       if (!isHourly && tempSeries.length > 200) {
@@ -660,8 +726,8 @@
       const tempLabel = isHourly ? "Temp" : "Max temp";
 
       const width = container.node().clientWidth;
-      const height = 350;
-      const margin = { top: 20, right: showTemp ? 48 : 20, bottom: 40, left: 55 };
+      const height = 470;   // includes room for the legend row under the x axis
+      const margin = { top: 20, right: showTemp ? 48 : 20, bottom: 72, left: 55 };
       const w = width - margin.left - margin.right;
       const h = height - margin.top - margin.bottom;
 
@@ -695,6 +761,30 @@
         .call(d3.axisLeft(y).ticks(5).tickSize(-w).tickFormat(""))
         .call(g => g.select(".domain").remove());
 
+      /* Weekend shading on zoomed-in views (behind the bars) */
+      const showWeekends = rangeDays !== "all" && rangeDays <= 90;
+      let weekendShaded = false;
+      if (showWeekends && isHourly) {
+        // 1D view: tint the whole plot if the shown day is a weekend
+        if (data.length && [0, 6].includes(data[0].date.getDay())) {
+          g.append("rect").attr("x", 0).attr("y", 0).attr("width", w).attr("height", h)
+            .attr("fill", "#64748b").attr("opacity", 0.06);
+          weekendShaded = true;
+        }
+      } else if (showWeekends) {
+        const [d0, d1] = x.domain();
+        const pxDay = w / ((d1 - d0) / 86400000);
+        d3.timeDay.range(d3.timeDay.floor(d0), d1).forEach(day => {
+          if (day.getDay() !== 0 && day.getDay() !== 6) return;
+          const xs = Math.max(0, x(day) - pxDay / 2);
+          const xe = Math.min(w, x(day) + pxDay / 2);
+          if (xe <= xs) return;
+          g.append("rect").attr("x", xs).attr("y", 0).attr("width", xe - xs).attr("height", h)
+            .attr("fill", "#64748b").attr("opacity", 0.07);
+          weekendShaded = true;
+        });
+      }
+
       /* Wave decoration along the x-axis */
       g.append("rect")
         .attr("x", 0).attr("y", h - 5)
@@ -702,19 +792,25 @@
         .attr("fill", "url(#wave-pattern)");
 
       const daySpan = (x.domain()[1] - x.domain()[0]) / (1000 * 60 * 60 * 24);
-      let tickFormat, tickInterval;
+      let tickFormat, tickInterval, tickValues = null;
       if (isHourly) {
         tickFormat = d3.timeFormat("%I %p");
         tickInterval = d3.timeHour.every(3);
-      } else if (daySpan <= 2) {
-        tickFormat = d3.timeFormat("%b %d");
-        tickInterval = d3.timeDay.every(1);
-      } else if (daySpan <= 10) {
-        tickFormat = d3.timeFormat("%a %b %d");
-        tickInterval = d3.timeDay.every(1);
-      } else if (daySpan <= 20) {
-        tickFormat = d3.timeFormat("%a %b %d");
-        tickInterval = d3.timeDay.every(2);
+      } else if (daySpan <= 32) {
+        // Label every bar: weekday+day when there's room (7D), otherwise bare
+        // day numbers with the month named on the first tick and at month
+        // boundaries. Thin the labels when the plot is too narrow to fit them.
+        const wide = daySpan <= 8;
+        const minPx = wide ? 52 : 20;
+        const step = Math.max(1, Math.ceil(data.length / Math.max(1, Math.floor(w / minPx))));
+        tickValues = data.map(d => d.date).filter((_, i) => i % step === 0);
+        const fmtDayNum = d3.timeFormat("%-d");
+        const fmtMonthDay = d3.timeFormat("%b %-d");
+        const fmtWeekdayDay = d3.timeFormat("%a %-d");
+        tickFormat = (d, i) =>
+          wide ? fmtWeekdayDay(d)
+               : (i === 0 || tickValues[i - 1].getMonth() !== d.getMonth()
+                   ? fmtMonthDay(d) : fmtDayNum(d));
       } else if (daySpan <= 45) {
         tickFormat = d3.timeFormat("%b %d");
         tickInterval = d3.timeWeek.every(1);
@@ -729,32 +825,48 @@
         tickInterval = d3.timeMonth.every(Math.ceil(daySpan / 365 * 2));
       }
 
+      const xAxis = d3.axisBottom(x).tickFormat(tickFormat);
+      if (tickValues) xAxis.tickValues(tickValues); else xAxis.ticks(tickInterval);
       g.append("g").attr("class", "axis")
         .attr("transform", `translate(0,${h})`)
-        .call(d3.axisBottom(x).ticks(tickInterval).tickFormat(tickFormat));
+        .call(xAxis);
 
       g.append("g").attr("class", "axis")
         .call(d3.axisLeft(y).ticks(5).tickFormat(d3.format("~s")));
 
-      /* Season legend */
-      const seasons = [
-        { label: "Winter", color: "#6ba3c9" },
-        { label: "Spring", color: "#4caf50" },
-        { label: "Summer", color: "#e05252" },
-        { label: "Fall", color: "#e8943a" },
+      /* Legend row centered below the x axis */
+      const legendItems = [
+        { label: "Winter", type: "swatch", color: "#6ba3c9", w: 68 },
+        { label: "Spring", type: "swatch", color: "#4caf50", w: 68 },
+        { label: "Summer", type: "swatch", color: "#e05252", w: 74 },
+        { label: "Fall", type: "swatch", color: "#e8943a", w: 52 },
       ];
-      const legend = g.append("g").attr("transform", `translate(${w - (showTemp ? 345 : 260)}, -5)`);
-      seasons.forEach((s, i) => {
-        const item = legend.append("g").attr("transform", `translate(${i * 68}, 0)`);
-        item.append("rect").attr("width", 10).attr("height", 10).attr("rx", 2).attr("fill", s.color);
-        item.append("text").attr("x", 14).attr("y", 9).attr("fill", "#56748f").attr("font-size", "11px").text(s.label);
+      if (showTemp) legendItems.push({ label: tempLabel, type: "line", color: "#7c3aed", w: tempLabel.length > 4 ? 85 : 55 });
+      if (showRain) legendItems.push({ label: rainLabel, type: "swatch", color: "#38bdf8", opacity: 0.6, w: rainMonthly ? 135 : 85 });
+      if (weekendShaded) legendItems.push({ label: "Weekend", type: "swatch", color: "#64748b", opacity: 0.25, w: 72 });
+      const legendW = d3.sum(legendItems, it => it.w);
+      const legend = g.append("g")
+        .attr("transform", `translate(${Math.max(0, (w - legendW) / 2)}, ${h + 38})`);
+      legend.append("rect")
+        .attr("x", -14).attr("y", -9)
+        .attr("width", legendW + 16).attr("height", 28)
+        .attr("rx", 8)
+        .attr("fill", "#ffffff").attr("opacity", 0.7)
+        .attr("stroke", "#d0dfec");
+      let lx = 0;
+      legendItems.forEach(it => {
+        const item = legend.append("g").attr("transform", `translate(${lx}, 0)`);
+        if (it.type === "line") {
+          item.append("line").attr("x1", 0).attr("x2", 14).attr("y1", 5).attr("y2", 5)
+            .attr("stroke", it.color).attr("stroke-width", 2);
+        } else {
+          item.append("rect").attr("width", 10).attr("height", 10).attr("rx", 2)
+            .attr("fill", it.color).attr("opacity", it.opacity ?? 1);
+        }
+        item.append("text").attr("x", it.type === "line" ? 18 : 14).attr("y", 9)
+          .attr("fill", "#56748f").attr("font-size", "11px").text(it.label);
+        lx += it.w;
       });
-      if (showTemp) {
-        const item = legend.append("g").attr("transform", "translate(272, 0)");
-        item.append("line").attr("x1", 0).attr("x2", 14).attr("y1", 5).attr("y2", 5)
-          .attr("stroke", "#7c3aed").attr("stroke-width", 2);
-        item.append("text").attr("x", 18).attr("y", 9).attr("fill", "#56748f").attr("font-size", "11px").text(tempLabel);
-      }
 
       const barWidth = Math.max(1, Math.min(20, (w / data.length) - 1));
 
@@ -769,6 +881,29 @@
           .attr("fill", d => barColor(d.date))
           .attr("opacity", 0.85)
           .attr("rx", barWidth > 3 ? 1.5 : 0);
+
+      /* Rain bars hanging from the top of the chart (meteogram style) */
+      if (showRain) {
+        const rMax = Math.max(5, d3.max(rainSeries, d => d.rain));
+        const rScale = d3.scaleLinear().domain([0, rMax]).range([0, h * 0.25]);
+        const bars = g.selectAll(".rain-bar").data(rainSeries).join("rect")
+          .attr("class", "rain-bar")
+          .attr("y", 0)
+          .attr("height", d => rScale(d.rain))
+          .attr("fill", "#38bdf8");
+        if (rainMonthly) {
+          bars
+            .attr("x", d => Math.max(0, x(d.start)) + 0.5)
+            .attr("width", d => Math.max(1, Math.min(w, x(d.end)) - Math.max(0, x(d.start)) - 1))
+            .attr("opacity", 0.35);
+        } else {
+          bars
+            .attr("x", d => x(d.date) - barWidth / 2)
+            .attr("width", barWidth)
+            .attr("opacity", 0.55)
+            .attr("rx", barWidth > 3 ? 1.5 : 0);
+        }
+      }
 
       /* Temperature line on its own right-hand °C scale */
       if (showTemp) {
@@ -812,10 +947,16 @@
           const d = date - d0.date > d1.date - date ? d1 : d0;
           focus.style("display", null).attr("cx", x(d.date)).attr("cy", y(d.redemptions));
           const label = isHourly ? fmtHour(d.date) : fmtDate(d.date);
-          const temp = tempMap.get(+d.date);
-          const tempLine = temp !== undefined ? `<br>${tempLabel}: ${temp.toFixed(1)}&deg;C` : "";
+          const wx = wxMap.get(+d.date);
+          let wxLines = "";
+          if (wx) {
+            const cond = weatherCondition(wx.code);
+            if (wx.temp !== undefined) wxLines += `<br>${tempLabel}: ${wx.temp.toFixed(1)}&deg;C`;
+            if (wx.rain > 0) wxLines += `<br>${isHourly ? "Precipitation" : "Daytime precipitation"}: ${wx.rain.toFixed(1)} mm`;
+            if (cond) wxLines += `<br>${cond.icon} ${cond.label}`;
+          }
           tooltip.style("opacity", 1)
-            .html(`<span class="tooltip-icon">&#9875;</span><strong>${label}</strong><br>Redemptions: ${fmt(d.redemptions)}${tempLine}`)
+            .html(`<span class="tooltip-icon">&#9875;</span><strong>${label}</strong><br>Redemptions: ${fmt(d.redemptions)}${wxLines}`)
             .style("left", (event.clientX + 12) + "px")
             .style("top", (event.clientY - 12) + "px");
         })

@@ -22,7 +22,7 @@ START_DATE = "2015-05-01"
 
 DAILY_VARS = (
     "temperature_2m_max,temperature_2m_min,precipitation_sum,"
-    "rain_sum,snowfall_sum,wind_speed_10m_max"
+    "rain_sum,snowfall_sum,wind_speed_10m_max,weather_code"
 )
 COLUMN_NAMES = {
     "time": "date",
@@ -32,6 +32,7 @@ COLUMN_NAMES = {
     "rain_sum": "rain_mm",
     "snowfall_sum": "snow_cm",
     "wind_speed_10m_max": "wind_max_kmh",
+    "weather_code": "wcode",
 }
 
 OUT_PATH = Path(__file__).parent.parent / "outputs" / "weather_daily.csv"
@@ -49,7 +50,7 @@ def fetch_daily(url, extra_params):
         "latitude": LAT,
         "longitude": LON,
         "daily": DAILY_VARS,
-        "hourly": "precipitation,temperature_2m",
+        "hourly": "precipitation,temperature_2m,weather_code",
         "timezone": "America/Toronto",
         **extra_params,
     }
@@ -85,10 +86,11 @@ def main():
     )
     forecast["is_forecast"] = 1
 
-    # Recent hourly temperatures for the dashboard's 1-day (hourly) chart view.
-    hourly_out = forecast_hourly.rename(columns={"temperature_2m": "temp_c"})
-    hourly_out[["time", "temp_c"]].to_csv(HOURLY_OUT_PATH, index=False)
-    print(f"Saved {len(hourly_out)} hourly temperature rows to {HOURLY_OUT_PATH}")
+    # Recent hourly weather for the dashboard's 1-day (hourly) chart view.
+    hourly_out = forecast_hourly.rename(
+        columns={"temperature_2m": "temp_c", "precipitation": "precip_mm", "weather_code": "wcode"})
+    hourly_out[["time", "temp_c", "precip_mm", "wcode"]].to_csv(HOURLY_OUT_PATH, index=False)
+    print(f"Saved {len(hourly_out)} hourly weather rows to {HOURLY_OUT_PATH}")
 
     # Archive rows win; forecast fills the gap between archive and tomorrow.
     combined = (
