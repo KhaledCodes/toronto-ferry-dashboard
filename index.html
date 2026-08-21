@@ -164,6 +164,27 @@
     .chart-controls button:hover { background: #dbe8f4; color: #10294a; }
     .chart-controls button.active { background: #003DA5; color: #ffffff; border-color: #1d6fb8; }
 
+    /* Segmented control (granularity selector) */
+    .segmented {
+      display: flex;
+      border: 1px solid #c9dcec;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .segmented button {
+      background: #f0f5fa;
+      color: #4e7a9e;
+      border: none;
+      border-right: 1px solid #c9dcec;
+      padding: 0.35rem 0.8rem;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .segmented button:last-child { border-right: none; }
+    .segmented button:hover { background: #dbe8f4; color: #10294a; }
+    .segmented button.active { background: #003DA5; color: #ffffff; }
+
     /* D3 chart styles */
     .axis text { fill: #56748f; font-size: 11px; }
     .axis path, .axis line { stroke: #d0dfec; }
@@ -288,18 +309,6 @@
       border-top: 2px dashed #22c55e;
     }
 
-    /* WIP banner */
-    .wip-banner {
-      background: rgba(232, 148, 58, 0.08);
-      border: 1px solid rgba(232, 148, 58, 0.25);
-      border-radius: 8px;
-      padding: 0.7rem 1rem;
-      margin-bottom: 1.5rem;
-      font-size: 0.82rem;
-      color: #8a6a2f;
-      line-height: 1.5;
-    }
-
     /* Accuracy table */
     .accuracy-header {
       display: flex;
@@ -420,22 +429,18 @@
 
   <div class="chart-section">
     <div class="chart-header">
-      <span class="chart-title">Daily Ridership</span>
-      <div class="chart-controls" id="trend-controls">
-        <button data-range="1">1D</button>
-        <button data-range="7">7D</button>
-        <button data-range="14">14D</button>
-        <button data-range="30">30D</button>
-        <button data-range="90">90D</button>
-        <button data-range="365">1Y</button>
-        <button data-range="all" class="active">All</button>
+      <div style="display:flex; gap:1rem; align-items:center; flex-wrap:wrap;">
+        <span class="chart-title">Ridership</span>
+        <div class="segmented" id="granularity-controls">
+          <button data-gran="daily" class="active">Daily</button>
+          <button data-gran="biweekly">Biweekly</button>
+          <button data-gran="monthly">Monthly</button>
+          <button data-gran="yearly">Yearly</button>
+        </div>
       </div>
+      <div class="chart-controls" id="trend-controls"></div>
     </div>
     <div id="trend-chart"></div>
-  </div>
-
-  <div class="wip-banner" id="wip-banner" style="display:none;">
-    &#128679; <strong>Work in Progress</strong> — The forecast and accuracy tracker are new features still being tuned. Predictions will improve as more data is collected.
   </div>
 
   <div class="chart-section" id="prediction-section" style="display:none;">
@@ -471,7 +476,7 @@
             <th>Day</th>
             <th>Predicted</th>
             <th>Actual</th>
-            <th>Error %</th>
+            <th>Accuracy %</th>
             <th>In Range</th>
           </tr>
         </thead>
@@ -573,15 +578,17 @@
       wxByDay = new Map((wxDaily || []).filter(d => d.date && isFinite(d.temp)).map(d => [+d.date, d]));
       wxByHour = new Map((wxHourly || []).filter(d => d.date && isFinite(d.temp)).map(d => [+d.date, d]));
       renderKPIs();
-      renderTrendChart("all");
-
-      // Wire up the range controls before the optional renders below, so a
+      // Wire up the chart controls before the optional renders below, so a
       // failure in renderPrediction/renderAccuracy can never disable them.
-      d3.selectAll("#trend-controls button").on("click", function () {
-        d3.selectAll("#trend-controls button").classed("active", false);
+      buildRangeControls();
+      renderRidershipChart();
+
+      d3.selectAll("#granularity-controls button").on("click", function () {
+        d3.selectAll("#granularity-controls button").classed("active", false);
         d3.select(this).classed("active", true);
-        const range = this.dataset.range;
-        renderTrendChart(range === "all" ? "all" : +range);
+        currentGranularity = this.dataset.gran;
+        buildRangeControls();
+        renderRidershipChart();
       });
 
       if (prediction) {
@@ -672,6 +679,33 @@
         row.append("span").attr("class", "rank").text(i + 1);
         row.append("span").attr("class", "date").text(fmtDateShort(d.date));
         row.append("span").attr("class", "val").text(fmt(d.redemptions));
+      });
+    }
+
+    /* Boxed legend row, centered at yPos within a chart group */
+    function drawBoxedLegend(g, items, w, yPos) {
+      const legendW = d3.sum(items, it => it.w);
+      const legend = g.append("g")
+        .attr("transform", `translate(${Math.max(0, (w - legendW) / 2)}, ${yPos})`);
+      legend.append("rect")
+        .attr("x", -14).attr("y", -9)
+        .attr("width", legendW + 16).attr("height", 28)
+        .attr("rx", 8)
+        .attr("fill", "#ffffff").attr("opacity", 0.7)
+        .attr("stroke", "#d0dfec");
+      let lx = 0;
+      items.forEach(it => {
+        const item = legend.append("g").attr("transform", `translate(${lx}, 0)`);
+        if (it.type === "line") {
+          item.append("line").attr("x1", 0).attr("x2", 14).attr("y1", 5).attr("y2", 5)
+            .attr("stroke", it.color).attr("stroke-width", 2);
+        } else {
+          item.append("rect").attr("width", 10).attr("height", 10).attr("rx", 2)
+            .attr("fill", it.color).attr("opacity", it.opacity ?? 1);
+        }
+        item.append("text").attr("x", it.type === "line" ? 18 : 14).attr("y", 9)
+          .attr("fill", "#56748f").attr("font-size", "11px").text(it.label);
+        lx += it.w;
       });
     }
 
@@ -844,29 +878,7 @@
       if (showTemp) legendItems.push({ label: tempLabel, type: "line", color: "#7c3aed", w: tempLabel.length > 4 ? 85 : 55 });
       if (showRain) legendItems.push({ label: rainLabel, type: "swatch", color: "#38bdf8", opacity: 0.6, w: rainMonthly ? 135 : 85 });
       if (weekendShaded) legendItems.push({ label: "Weekend", type: "swatch", color: "#64748b", opacity: 0.25, w: 72 });
-      const legendW = d3.sum(legendItems, it => it.w);
-      const legend = g.append("g")
-        .attr("transform", `translate(${Math.max(0, (w - legendW) / 2)}, ${h + 38})`);
-      legend.append("rect")
-        .attr("x", -14).attr("y", -9)
-        .attr("width", legendW + 16).attr("height", 28)
-        .attr("rx", 8)
-        .attr("fill", "#ffffff").attr("opacity", 0.7)
-        .attr("stroke", "#d0dfec");
-      let lx = 0;
-      legendItems.forEach(it => {
-        const item = legend.append("g").attr("transform", `translate(${lx}, 0)`);
-        if (it.type === "line") {
-          item.append("line").attr("x1", 0).attr("x2", 14).attr("y1", 5).attr("y2", 5)
-            .attr("stroke", it.color).attr("stroke-width", 2);
-        } else {
-          item.append("rect").attr("width", 10).attr("height", 10).attr("rx", 2)
-            .attr("fill", it.color).attr("opacity", it.opacity ?? 1);
-        }
-        item.append("text").attr("x", it.type === "line" ? 18 : 14).attr("y", 9)
-          .attr("fill", "#56748f").attr("font-size", "11px").text(it.label);
-        lx += it.w;
-      });
+      drawBoxedLegend(g, legendItems, w, h + 38);
 
       const barWidth = Math.max(1, Math.min(20, (w / data.length) - 1));
 
@@ -966,13 +978,233 @@
         });
     }
 
+    /* ── Ridership chart controls: granularity × time horizon ── */
+    let currentGranularity = "daily";
+    let currentRangeDays = "all";
+
+    // Horizons that make sense per granularity (value in days, label shown).
+    const RANGE_OPTIONS = {
+      daily: [[1, "1D"], [7, "7D"], [14, "14D"], [30, "30D"], [90, "90D"], [365, "1Y"], ["all", "All"]],
+      biweekly: [[182, "6M"], [365, "1Y"], [730, "2Y"], [1825, "5Y"], ["all", "All"]],
+      monthly: [[365, "1Y"], [730, "2Y"], [1825, "5Y"], ["all", "All"]],
+      yearly: [["all", "All"]],
+    };
+
+    // Rebuild the range buttons for the current granularity, carrying the
+    // selected horizon over to the nearest available option.
+    function buildRangeControls() {
+      const opts = RANGE_OPTIONS[currentGranularity];
+      const ctrl = d3.select("#trend-controls");
+      ctrl.style("display", opts.length > 1 ? null : "none");
+      if (!opts.some(([v]) => v === currentRangeDays)) {
+        if (currentRangeDays !== "all") {
+          const bigger = opts.map(([v]) => v).filter(v => v !== "all" && v >= currentRangeDays);
+          currentRangeDays = bigger.length ? Math.min(...bigger) : "all";
+        }
+      }
+      ctrl.html("");
+      ctrl.append("span")
+        .style("align-self", "center")
+        .style("font-size", "0.75rem")
+        .style("color", "#56748f")
+        .text("Time horizon:");
+      opts.forEach(([value, label]) => {
+        ctrl.append("button")
+          .classed("active", value === currentRangeDays)
+          .text(label)
+          .on("click", function () {
+            currentRangeDays = value;
+            ctrl.selectAll("button").classed("active", false);
+            d3.select(this).classed("active", true);
+            renderRidershipChart();
+          });
+      });
+    }
+
+    function renderRidershipChart() {
+      if (currentGranularity === "daily") {
+        renderTrendChart(currentRangeDays);
+      } else {
+        renderAggChart(currentGranularity, currentRangeDays);
+      }
+    }
+
+    const AGG_CONFIGS = {
+      biweekly: {
+        // Fortnights anchored to Monday Jan 5, 2015 so buckets never shift
+        floor: d => {
+          const monday = d3.timeMonday.floor(d);
+          const idx = d3.timeMonday.count(new Date(2015, 0, 5), monday);
+          return d3.timeMonday.offset(monday, -(((idx % 2) + 2) % 2));
+        },
+        next: d => d3.timeMonday.offset(d, 2),
+        label: d => `${fmtDateShort(d)} – ${fmtDate(d3.timeDay.offset(d, 13))}`,
+        color: d => barColor(d3.timeDay.offset(d, 7)),
+      },
+      monthly: {
+        floor: d3.timeMonth.floor,
+        next: d => d3.timeMonth.offset(d, 1),
+        label: d3.timeFormat("%B %Y"),
+        color: d => barColor(d3.timeDay.offset(d, 14)),
+      },
+      yearly: {
+        floor: d3.timeYear.floor,
+        next: d => d3.timeYear.offset(d, 1),
+        label: d3.timeFormat("%Y"),
+        color: () => "#14b8a6",
+      },
+    };
+
+    function renderAggChart(key, rangeDays) {
+      const cfg = AGG_CONFIGS[key];
+      const container = d3.select("#trend-chart");
+      container.html("");
+      if (!allData || allData.length === 0) return;
+
+      const lastDate = allData[allData.length - 1].date;
+      const source = rangeDays === "all"
+        ? allData
+        : allData.filter(d => d.date >= d3.timeDay.offset(lastDate, -rangeDays));
+      if (source.length === 0) return;
+
+      const firstDate = source[0].date;
+      const buckets = new Map();
+      source.forEach(d => {
+        const start = cfg.floor(d.date);
+        if (!buckets.has(+start)) {
+          buckets.set(+start, { start, redemptions: 0, tempSum: 0, tempN: 0, rain: 0 });
+        }
+        const b = buckets.get(+start);
+        b.redemptions += d.redemptions;
+        const wx = wxByDay.get(+d.date);
+        if (wx) {
+          if (isFinite(wx.temp)) { b.tempSum += wx.temp; b.tempN++; }
+          if (isFinite(wx.rain)) b.rain += wx.rain;
+        }
+      });
+      const data = [...buckets.values()].sort((a, b) => a.start - b.start).map(b => ({
+        ...b,
+        end: cfg.next(b.start),
+        temp: b.tempN ? b.tempSum / b.tempN : undefined,
+        partial: b.start < firstDate || cfg.next(b.start) > d3.timeDay.offset(lastDate, 1),
+      }));
+
+      const width = container.node().clientWidth;
+      const height = 470;
+      const margin = { top: 20, right: 48, bottom: 72, left: 55 };
+      const w = width - margin.left - margin.right;
+      const h = height - margin.top - margin.bottom;
+
+      const svg = container.append("svg").attr("width", width).attr("height", height);
+      const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+      const x = d3.scaleTime().domain([data[0].start, data[data.length - 1].end]).range([0, w]);
+      // Top strip is reserved for precipitation so it never overlaps the bars
+      const rainBand = h * 0.25;
+      const y = d3.scaleLinear()
+        .domain([0, d3.max(data, d => d.redemptions) * 1.05])
+        .range([h, rainBand + 10]);
+
+      g.append("g").attr("class", "grid")
+        .call(d3.axisLeft(y).ticks(5).tickSize(-w).tickFormat(""))
+        .call(g => g.select(".domain").remove());
+      g.append("line")
+        .attr("x1", 0).attr("x2", w).attr("y1", rainBand + 5).attr("y2", rainBand + 5)
+        .attr("stroke", "#d0dfec").attr("stroke-dasharray", "3,3");
+
+      const winDays = (x.domain()[1] - x.domain()[0]) / 86400000;
+      const xAxis = key === "yearly"
+        ? d3.axisBottom(x)
+            .tickValues(data.map(d => new Date((+d.start + +d.end) / 2)))
+            .tickFormat((d, i) => d3.timeFormat("%Y")(data[i].start))
+        : winDays <= 800
+          ? d3.axisBottom(x).ticks(d3.timeMonth.every(winDays <= 400 ? 1 : 2)).tickFormat(d3.timeFormat("%b '%y"))
+          : d3.axisBottom(x).ticks(d3.timeYear.every(1)).tickFormat(d3.timeFormat("%Y"));
+      g.append("g").attr("class", "axis").attr("transform", `translate(0,${h})`).call(xAxis);
+      g.append("g").attr("class", "axis").call(d3.axisLeft(y).ticks(5).tickFormat(d3.format("~s")));
+
+      g.selectAll(".bar").data(data).join("rect")
+        .attr("class", "bar")
+        .attr("x", d => x(d.start) + 1)
+        .attr("y", d => y(d.redemptions))
+        .attr("width", d => Math.max(1, x(d.end) - x(d.start) - 2))
+        .attr("height", d => h - y(d.redemptions))
+        .attr("fill", d => cfg.color(d.start))
+        .attr("opacity", 0.85)
+        .attr("rx", 1.5);
+
+      /* Precipitation totals hanging from the top */
+      const rainMax = d3.max(data, d => d.rain);
+      if (rainMax > 0) {
+        const rScale = d3.scaleLinear().domain([0, Math.max(5, rainMax)]).range([0, rainBand]);
+        g.selectAll(".rain-bar").data(data.filter(d => d.rain > 0)).join("rect")
+          .attr("class", "rain-bar")
+          .attr("x", d => x(d.start) + 1)
+          .attr("y", 0)
+          .attr("width", d => Math.max(1, x(d.end) - x(d.start) - 2))
+          .attr("height", d => rScale(d.rain))
+          .attr("fill", "#38bdf8")
+          .attr("opacity", 0.35);
+      }
+
+      /* Average max-temp line at bucket midpoints */
+      const tempSeries = data.filter(d => d.temp !== undefined)
+        .map(d => ({ date: new Date((+d.start + +d.end) / 2), temp: d.temp }));
+      if (tempSeries.length > 1) {
+        const [tMin, tMax] = d3.extent(tempSeries, d => d.temp);
+        const y2 = d3.scaleLinear()
+          .domain([Math.floor(tMin - 2), Math.ceil(tMax + 2)])
+          .range([h, rainBand + 10]);
+        g.append("g").attr("class", "axis").attr("transform", `translate(${w},0)`)
+          .call(d3.axisRight(y2).ticks(5).tickFormat(t => t + "°"));
+        g.append("path").datum(tempSeries)
+          .attr("fill", "none").attr("stroke", "#7c3aed")
+          .attr("stroke-width", 1.5).attr("opacity", 0.75)
+          .attr("d", d3.line().x(d => x(d.date)).y(d => y2(d.temp)));
+      }
+
+      const legendItems = key === "yearly"
+        ? [{ label: "Redemptions", type: "swatch", color: "#14b8a6", w: 100 }]
+        : [
+            { label: "Winter", type: "swatch", color: "#6ba3c9", w: 68 },
+            { label: "Spring", type: "swatch", color: "#4caf50", w: 68 },
+            { label: "Summer", type: "swatch", color: "#e05252", w: 74 },
+            { label: "Fall", type: "swatch", color: "#e8943a", w: 52 },
+          ];
+      legendItems.push({ label: "Avg max temp", type: "line", color: "#7c3aed", w: 108 });
+      if (rainMax > 0) legendItems.push({ label: "Precipitation", type: "swatch", color: "#38bdf8", opacity: 0.6, w: 85 });
+      drawBoxedLegend(g, legendItems, w, h + 38);
+
+      /* Tooltip */
+      const tooltip = d3.select("#tooltip");
+      const bisect = d3.bisector(d => d.start).right;
+      svg.append("rect")
+        .attr("width", w).attr("height", h)
+        .attr("transform", `translate(${margin.left},${margin.top})`)
+        .attr("fill", "transparent")
+        .on("mousemove", function (event) {
+          const [mx] = d3.pointer(event, this);
+          const date = x.invert(mx);
+          const d = data[Math.max(0, bisect(data, date) - 1)];
+          if (!d) return;
+          let lines = `<strong>${cfg.label(d.start)}${d.partial ? " · partial" : ""}</strong>` +
+            `<br>Redemptions: ${fmt(d.redemptions)}`;
+          if (d.temp !== undefined) lines += `<br>Avg max temp: ${d.temp.toFixed(1)}&deg;C`;
+          if (d.rain > 0) lines += `<br>Precipitation: ${d.rain.toFixed(0)} mm`;
+          tooltip.style("opacity", 1)
+            .html(`<span class="tooltip-icon">&#9875;</span>${lines}`)
+            .style("left", (event.clientX + 12) + "px")
+            .style("top", (event.clientY - 12) + "px");
+        })
+        .on("mouseleave", () => tooltip.style("opacity", 0));
+    }
+
     /* ── Prediction Chart ── */
     function renderPrediction(pred) {
       const generatedAt = new Date(pred.model_info.generated_at);
       const ageHours = (Date.now() - generatedAt.getTime()) / (1000 * 60 * 60);
       if (ageHours > 48) return;
 
-      d3.select("#wip-banner").style("display", null);
       const section = d3.select("#prediction-section").style("display", null);
 
       d3.select("#pred-value").text(fmt(pred.predicted_redemptions));
@@ -1167,16 +1399,15 @@
       const stats = d3.select("#accuracy-stats");
       stats.html("");
       if (evaluated.length > 0) {
-        const withinCI = evaluated.filter(r => {
-          const a = +r.actual, lo = +r.ci_lower, hi = +r.ci_upper;
-          return a >= lo && a <= hi;
-        }).length;
+        // rows is newest-first, so the first evaluated entries are the freshest
+        const last7 = evaluated.slice(0, 7);
+        const avgAccuracy = d3.mean(last7, r => Math.max(0, 100 - parseFloat(r.error_pct)));
         stats.html(
-          `Within range: <span>${withinCI}/${evaluated.length}</span> · ` +
-          `Tracked: <span>${rows.length}</span>`
+          `Last 7 days accuracy: <span>${avgAccuracy.toFixed(1)}%</span> · ` +
+          `Tracked: <span>${rows.length} days</span>`
         );
       } else {
-        stats.html(`Tracked: <span>${rows.length}</span> · <span class="pending" style="color:#4e7a9e;font-weight:400;">Awaiting actuals</span>`);
+        stats.html(`Tracked: <span>${rows.length} days</span> · <span class="pending" style="color:#4e7a9e;font-weight:400;">Awaiting actuals</span>`);
       }
 
       const body = d3.select("#accuracy-body");
@@ -1193,7 +1424,8 @@
 
           const errPct = parseFloat(r.error_pct);
           const errClass = errPct <= 15 ? "error-good" : errPct <= 30 ? "error-ok" : "error-bad";
-          tr.append("td").attr("class", errClass).text(errPct.toFixed(1) + "%");
+          const accuracy = Math.max(0, 100 - errPct);
+          tr.append("td").attr("class", errClass).text(accuracy.toFixed(1) + "%");
 
           const inRange = +r.actual >= +r.ci_lower && +r.actual <= +r.ci_upper;
           const ciTd = tr.append("td");
@@ -1209,8 +1441,7 @@
     }
 
     window.addEventListener("resize", () => {
-      const activeRange = d3.select("#trend-controls button.active").attr("data-range");
-      renderTrendChart(activeRange === "all" ? "all" : +activeRange);
+      renderRidershipChart();
       if (predictionData) drawPredictionChart(predictionData);
     });
   </script>
