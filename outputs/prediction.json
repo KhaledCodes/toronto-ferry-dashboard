@@ -1,10 +1,10 @@
 {
   "prediction_date": "2026-08-27",
   "day_of_week_name": "Thursday",
-  "predicted_redemptions": 10813,
+  "predicted_redemptions": 10946,
   "confidence_interval": {
-    "lower": 5882,
-    "upper": 15744,
+    "lower": 5918,
+    "upper": 15974,
     "level": 0.8
   },
   "context": {
@@ -43,8 +43,8 @@
     ]
   },
   "model_info": {
-    "validation_mae": 3866,
-    "validation_r2": 0.256,
-    "generated_at": "2026-08-26T14:35:39Z"
+    "validation_mae": 3952,
+    "validation_r2": 0.231,
+    "generated_at": "2026-08-26T16:10:46Z"
   }
 }
