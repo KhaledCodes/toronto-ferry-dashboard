@@ -1,14 +1,14 @@
 {
-  "prediction_date": "2026-09-03",
-  "day_of_week_name": "Thursday",
-  "predicted_redemptions": 4633,
+  "prediction_date": "2026-09-04",
+  "day_of_week_name": "Friday",
+  "predicted_redemptions": 5774,
   "confidence_interval": {
-    "lower": 0,
-    "upper": 9661,
+    "lower": 746,
+    "upper": 10802,
     "level": 0.8
   },
   "context": {
-    "same_dow_avg": 11285,
+    "same_dow_avg": 12781,
     "last_7d": [
       {
         "date": "2026-08-16",
@@ -45,6 +45,6 @@
   "model_info": {
     "validation_mae": 3952,
     "validation_r2": 0.231,
-    "generated_at": "2026-09-03T02:12:25Z"
+    "generated_at": "2026-09-03T07:31:40Z"
   }
 }
