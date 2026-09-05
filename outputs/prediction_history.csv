@@ -97,4 +97,4 @@ date,day,predicted,ci_lower,ci_upper,actual,error_pct,locked
 2026-09-02,Wednesday,3490.0,0.0,8518.0,,,1
 2026-09-03,Thursday,4633.0,0.0,9661.0,,,1
 2026-09-04,Friday,7266.0,2238.0,12294.0,,,1
-2026-09-05,Saturday,12195.0,7167.0,17223.0,,,0
+2026-09-05,Saturday,12299.0,7271.0,17327.0,,,0
