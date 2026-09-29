@@ -591,15 +591,34 @@
         renderRidershipChart();
       });
 
-      if (prediction) {
+      if (isCurrentForecast(prediction)) {
         predictionData = prediction;
         renderPrediction(prediction);
+      } else {
+        d3.select("#prediction-section").style("display", null);
+        d3.select("#pred-date").text("Forecast unavailable — waiting for an up-to-date prediction.");
+        d3.select(".prediction-legend").style("display", "none");
       }
       if (history && history.length > 0) renderAccuracy(history);
       renderLastUpdated();
     });
 
     /* ── Latest data timestamp ── */
+    function torontoDate(now = new Date()) {
+      return new Intl.DateTimeFormat("en-CA", {
+        timeZone: "America/Toronto", year: "numeric", month: "2-digit", day: "2-digit"
+      }).format(now);
+    }
+
+    function isCurrentForecast(prediction, now = new Date()) {
+      // Advance the Toronto calendar date in UTC to avoid DST and viewer-zone drift.
+      const tomorrow = new Date(torontoDate(now) + "T12:00:00Z");
+      tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+      return !!prediction && prediction.status !== "unavailable" &&
+        Number.isFinite(prediction.predicted_redemptions) &&
+        prediction.prediction_date === tomorrow.toISOString().slice(0, 10);
+    }
+
     // Show how current the SOURCE DATA is (its latest timestamp), not when the
     // pipeline ran — the feed lags the clock, so the data time is the honest one.
     function renderLastUpdated() {
@@ -612,6 +631,14 @@
         hasHourly ? { dateStyle: "medium", timeStyle: "short" } : { dateStyle: "medium" });
       el.html(`Latest data: ${abs} <span style="opacity:.65">· ${relativeTime(latest)}</span>`)
         .attr("title", latest.toString());
+      // CSV dates represent Toronto local time, even for visitors in other zones.
+      const latestDay = d3.timeFormat("%Y-%m-%d")(latest);
+      const ageDays = (Date.parse(torontoDate() + "T00:00:00Z") -
+        Date.parse(latestDay + "T00:00:00Z")) / 86400000;
+      if (ageDays >= 2) {
+        el.append("span").style("color", "#a34816")
+          .text(" · Updates delayed — showing the last available ferry data.");
+      }
     }
 
     function relativeTime(d) {

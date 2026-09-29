@@ -27,6 +27,25 @@ A live dashboard tracking Toronto Island Ferry ridership, built with D3.js and s
 4. Updated CSVs are committed back to the repo
 5. GitHub Pages serves `index.html`, which loads the CSVs with D3.js
 
+### Freshness safeguards
+
+Downloads bypass shared caches and are checked against the live datastore's
+latest timestamp. If the primary dump is stale or fails, the fetcher tries the
+City's alternate CSV download. Data more than 48 hours old, behind the live
+datastore, or missing the existing history is rejected before replacing any files.
+If both sources fail, the workflow fails and its existing issue notification fires.
+
+The dashboard flags delayed observations and only displays a forecast whose date
+is tomorrow in Toronto. The prediction script also suppresses forecasts when
+observations are more than 48 hours old.
+
+Run the regression checks with:
+
+```bash
+python -m unittest discover -s tests -v
+node tests/test_dashboard_freshness.cjs
+```
+
 ## Project Structure
 
 ```

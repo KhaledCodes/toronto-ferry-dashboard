@@ -374,6 +374,17 @@ def main():
     df = df.sort_values("date").reset_index(drop=True)
 
     hourly = pd.read_csv(HOURLY_CSV, parse_dates=["hour"])
+    now = pd.Timestamp(datetime.now(LOCAL_TZ).replace(tzinfo=None))
+    today = now.normalize()
+    real_tomorrow = today + timedelta(days=1)
+    if df.empty or hourly.empty or now - hourly["hour"].max() > pd.Timedelta(hours=48):
+        OUTPUT_JSON.write_text(json.dumps({
+            "status": "unavailable",
+            "reason": "Ferry observations are too old for tomorrow's forecast.",
+            "prediction_date": real_tomorrow.strftime("%Y-%m-%d"),
+        }, indent=2))
+        print("Forecast unavailable: ferry observations are more than 48 hours old")
+        return
     weather = load_weather()
     profile = build_intraday_profile(hourly)
     df_nc, nc = nowcast_partial_day(df, hourly, profile)
@@ -387,12 +398,10 @@ def main():
     # today's lag is the nowcast (a sane full-day estimate) rather than its partial
     # sum; the horizon reaches real tomorrow in both regimes (1 step when today's
     # partial data is present, recursive backfill when the feed lags).
-    today = pd.Timestamp(datetime.now(LOCAL_TZ).date())
-    real_tomorrow = today + timedelta(days=1)
     src = df_nc if nc["is_partial"] else df
     forecasts = forecast_horizon(model, src, weather, residual_std, real_tomorrow)
 
-    headline = next((f for f in forecasts if f["date"] == real_tomorrow), forecasts[-1])
+    headline = next(f for f in forecasts if f["date"] == real_tomorrow)
     tomorrow = headline["date"]
 
     context = build_context(df_nc, tomorrow)
