@@ -468,6 +468,7 @@
       <span class="chart-title">Model Accuracy Tracker</span>
       <div class="accuracy-stats" id="accuracy-stats"></div>
     </div>
+    <p id="accuracy-note" style="font-size:13px;color:#526579;line-height:1.5;"></p>
     <div style="overflow-x:auto;">
       <table class="accuracy-table">
         <thead>
@@ -1411,13 +1412,43 @@
     }
 
     /* ── Accuracy Table ── */
+    function hasNumber(value) {
+      return value !== "" && value != null && Number.isFinite(Number(value));
+    }
+
+    function buildAccuracyRows(history, daily) {
+      if (!history.length) return [];
+      const byDate = new Map(history.map(r => [r.date, { ...r }]));
+      const firstDate = history.reduce((first, r) => r.date < first ? r.date : first, history[0].date);
+      const latestActual = daily.reduce((last, r) => r.date > last ? r.date : last, "");
+      // Keep recorded predictions intact. Missing forecasts cannot be recreated
+      // after observing the outcome and counted as historical performance.
+      for (const day of daily) {
+        if (day.date < firstDate) continue;
+        let row = byDate.get(day.date);
+        if (!row) {
+          row = { date: day.date, day: new Intl.DateTimeFormat("en-CA", {
+            weekday: "long", timeZone: "UTC"
+          }).format(new Date(day.date + "T12:00:00Z")), predicted: "" };
+          byDate.set(day.date, row);
+        }
+        if (!hasNumber(row.actual)) {
+          row.actual = day.redemptions;
+          row.partial = day.date === latestActual;
+          if (!row.partial && hasNumber(row.predicted) && Number(row.actual) > 0) {
+            row.error_pct = Math.abs(Number(row.predicted) - Number(row.actual)) / Number(row.actual) * 100;
+          }
+        }
+      }
+      return [...byDate.values()].sort((a, b) => b.date.localeCompare(a.date));
+    }
+
     function renderAccuracy(history) {
-      const rows = history.slice().reverse();
-      // Only count rows that have BOTH an actual and a numeric error_pct —
-      // a filled actual with a blank error_pct would make d3.mean undefined.
+      const rows = buildAccuracyRows(history, allData.map(d => ({
+        date: d3.timeFormat("%Y-%m-%d")(d.date), redemptions: d.redemptions
+      })));
       const evaluated = rows.filter(r =>
-        r.actual !== "" && r.actual != null &&
-        r.error_pct !== "" && r.error_pct != null && !isNaN(parseFloat(r.error_pct))
+        !r.partial && hasNumber(r.predicted) && hasNumber(r.actual) && hasNumber(r.error_pct)
       );
 
       if (rows.length === 0) return;
@@ -1430,12 +1461,17 @@
         const last7 = evaluated.slice(0, 7);
         const avgAccuracy = d3.mean(last7, r => Math.max(0, 100 - parseFloat(r.error_pct)));
         stats.html(
-          `Last 7 days accuracy: <span>${avgAccuracy.toFixed(1)}%</span> · ` +
-          `Tracked: <span>${rows.length} days</span>`
+          `Last ${last7.length} scored forecasts: <span>${avgAccuracy.toFixed(1)}%</span> accuracy · ` +
+          `Latest scored: <span>${evaluated[0].date}</span>`
         );
       } else {
-        stats.html(`Tracked: <span>${rows.length} days</span> · <span class="pending" style="color:#4e7a9e;font-weight:400;">Awaiting actuals</span>`);
+        stats.text("No scored forecasts yet");
       }
+      const missing = rows.filter(r => !hasNumber(r.predicted)).length;
+      d3.select("#accuracy-note").text(
+        (missing ? `${missing} days have no recorded forecast, so accuracy is unavailable for those dates. ` : "") +
+        "The latest day's ridership is provisional until the next day's data arrives."
+      );
 
       const body = d3.select("#accuracy-body");
       body.html("");
@@ -1444,23 +1480,26 @@
         const tr = body.append("tr");
         tr.append("td").text(r.date);
         tr.append("td").text(r.day);
-        tr.append("td").text(fmt(+r.predicted));
+        const hasForecast = hasNumber(r.predicted);
+        tr.append("td").text(hasForecast ? fmt(+r.predicted) : "No forecast");
+        tr.append("td").text(hasNumber(r.actual)
+          ? fmt(+r.actual) + (r.partial ? " (partial)" : "") : "pending");
 
-        if (r.actual !== "" && r.actual != null) {
-          tr.append("td").text(fmt(+r.actual));
-
+        if (hasForecast && !r.partial && hasNumber(r.actual) && hasNumber(r.error_pct)) {
           const errPct = parseFloat(r.error_pct);
           const errClass = errPct <= 15 ? "error-good" : errPct <= 30 ? "error-ok" : "error-bad";
           const accuracy = Math.max(0, 100 - errPct);
           tr.append("td").attr("class", errClass).text(accuracy.toFixed(1) + "%");
 
-          const inRange = +r.actual >= +r.ci_lower && +r.actual <= +r.ci_upper;
           const ciTd = tr.append("td");
-          ciTd.text(inRange ? "Yes" : "No");
-          ciTd.append("span")
-            .attr("class", `within-ci ${inRange ? "yes" : "no"}`);
+          if (hasNumber(r.ci_lower) && hasNumber(r.ci_upper)) {
+            const inRange = +r.actual >= +r.ci_lower && +r.actual <= +r.ci_upper;
+            ciTd.text(inRange ? "Yes" : "No");
+            ciTd.append("span").attr("class", `within-ci ${inRange ? "yes" : "no"}`);
+          } else {
+            ciTd.text("—");
+          }
         } else {
-          tr.append("td").attr("class", "pending").text("pending");
           tr.append("td").attr("class", "pending").text("—");
           tr.append("td").attr("class", "pending").text("—");
         }
