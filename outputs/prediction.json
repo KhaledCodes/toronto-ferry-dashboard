@@ -1,10 +1,10 @@
 {
   "prediction_date": "2026-10-31",
   "day_of_week_name": "Saturday",
-  "predicted_redemptions": 2491,
+  "predicted_redemptions": 3283,
   "confidence_interval": {
-    "lower": 1774,
-    "upper": 3208,
+    "lower": 2566,
+    "upper": 4000,
     "level": 0.8
   },
   "context": {
@@ -36,15 +36,15 @@
       },
       {
         "date": "2026-10-30",
-        "redemptions": 1242,
+        "redemptions": 1718,
         "nowcast": true,
-        "observed_pct": 33
+        "observed_pct": 89
       }
     ]
   },
   "model_info": {
     "validation_mae": 421,
     "validation_r2": 0.816,
-    "generated_at": "2026-10-30T16:53:29Z"
+    "generated_at": "2026-10-31T01:16:12Z"
   }
 }
