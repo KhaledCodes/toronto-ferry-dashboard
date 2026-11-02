@@ -1,19 +1,15 @@
 {
-  "prediction_date": "2026-11-02",
-  "day_of_week_name": "Monday",
-  "predicted_redemptions": 1997,
+  "prediction_date": "2026-11-03",
+  "day_of_week_name": "Tuesday",
+  "predicted_redemptions": 978,
   "confidence_interval": {
-    "lower": 1232,
-    "upper": 2762,
+    "lower": 232,
+    "upper": 1724,
     "level": 0.8
   },
   "context": {
-    "same_dow_avg": 4858,
+    "same_dow_avg": 3022,
     "last_7d": [
-      {
-        "date": "2026-10-26",
-        "redemptions": 2003
-      },
       {
         "date": "2026-10-27",
         "redemptions": 1915
@@ -36,15 +32,19 @@
       },
       {
         "date": "2026-11-01",
-        "redemptions": 2530,
+        "redemptions": 2502
+      },
+      {
+        "date": "2026-11-02",
+        "redemptions": 0,
         "nowcast": true,
-        "observed_pct": 98
+        "observed_pct": 2
       }
     ]
   },
   "model_info": {
-    "validation_mae": 457,
-    "validation_r2": 0.795,
-    "generated_at": "2026-11-02T03:33:58Z"
+    "validation_mae": 431,
+    "validation_r2": 0.804,
+    "generated_at": "2026-11-02T11:51:53Z"
   }
 }
