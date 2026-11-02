@@ -1,5 +1,50 @@
 {
-  "status": "unavailable",
-  "reason": "Ferry observations are too old for tomorrow's forecast.",
-  "prediction_date": "2026-11-02"
+  "prediction_date": "2026-11-02",
+  "day_of_week_name": "Monday",
+  "predicted_redemptions": 1997,
+  "confidence_interval": {
+    "lower": 1232,
+    "upper": 2762,
+    "level": 0.8
+  },
+  "context": {
+    "same_dow_avg": 4858,
+    "last_7d": [
+      {
+        "date": "2026-10-26",
+        "redemptions": 2003
+      },
+      {
+        "date": "2026-10-27",
+        "redemptions": 1915
+      },
+      {
+        "date": "2026-10-28",
+        "redemptions": 1966
+      },
+      {
+        "date": "2026-10-29",
+        "redemptions": 2155
+      },
+      {
+        "date": "2026-10-30",
+        "redemptions": 1683
+      },
+      {
+        "date": "2026-10-31",
+        "redemptions": 2881
+      },
+      {
+        "date": "2026-11-01",
+        "redemptions": 2530,
+        "nowcast": true,
+        "observed_pct": 98
+      }
+    ]
+  },
+  "model_info": {
+    "validation_mae": 457,
+    "validation_r2": 0.795,
+    "generated_at": "2026-11-02T03:33:58Z"
+  }
 }
