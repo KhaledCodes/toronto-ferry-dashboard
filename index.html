@@ -1443,13 +1443,22 @@
       return [...byDate.values()].sort((a, b) => b.date.localeCompare(a.date));
     }
 
+    function recentScoredForecasts(rows, now = new Date()) {
+      const today = torontoDate(now);
+      const start = new Date(today + "T12:00:00Z");
+      start.setUTCDate(start.getUTCDate() - 30);
+      const startDate = start.toISOString().slice(0, 10);
+      return rows.filter(r =>
+        r.date >= startDate && r.date < today && !r.partial &&
+        hasNumber(r.predicted) && hasNumber(r.actual) && hasNumber(r.error_pct)
+      );
+    }
+
     function renderAccuracy(history) {
       const rows = buildAccuracyRows(history, allData.map(d => ({
         date: d3.timeFormat("%Y-%m-%d")(d.date), redemptions: d.redemptions
       })));
-      const evaluated = rows.filter(r =>
-        !r.partial && hasNumber(r.predicted) && hasNumber(r.actual) && hasNumber(r.error_pct)
-      );
+      const evaluated = recentScoredForecasts(rows);
 
       if (rows.length === 0) return;
       d3.select("#accuracy-section").style("display", null);
@@ -1457,18 +1466,18 @@
       const stats = d3.select("#accuracy-stats");
       stats.html("");
       if (evaluated.length > 0) {
-        // rows is newest-first, so the first evaluated entries are the freshest
-        const last7 = evaluated.slice(0, 7);
-        const avgAccuracy = d3.mean(last7, r => Math.max(0, 100 - parseFloat(r.error_pct)));
+        const avgAccuracy = d3.mean(evaluated, r => Math.max(0, 100 - parseFloat(r.error_pct)));
         stats.html(
-          `Last ${last7.length} scored forecasts: <span>${avgAccuracy.toFixed(1)}%</span> accuracy · ` +
+          `30-day average accuracy: <span>${avgAccuracy.toFixed(1)}%</span> · ` +
+          `${evaluated.length} scored forecasts · ` +
           `Latest scored: <span>${evaluated[0].date}</span>`
         );
       } else {
-        stats.text("No scored forecasts yet");
+        stats.text("30-day average accuracy: unavailable — no scored forecasts in this period");
       }
       const missing = rows.filter(r => !hasNumber(r.predicted)).length;
       d3.select("#accuracy-note").text(
+        "The average covers the previous 30 completed calendar days in Toronto. " +
         (missing ? `${missing} days have no recorded forecast, so accuracy is unavailable for those dates. ` : "") +
         "The latest day's ridership is provisional until the next day's data arrives."
       );
