@@ -1468,9 +1468,7 @@
       if (evaluated.length > 0) {
         const avgAccuracy = d3.mean(evaluated, r => Math.max(0, 100 - parseFloat(r.error_pct)));
         stats.html(
-          `30-day average accuracy: <span>${avgAccuracy.toFixed(1)}%</span> · ` +
-          `${evaluated.length} scored forecasts · ` +
-          `Latest scored: <span>${evaluated[0].date}</span>`
+          `30-day average accuracy: <span>${avgAccuracy.toFixed(1)}%</span>`
         );
       } else {
         stats.text("30-day average accuracy: unavailable — no scored forecasts in this period");
